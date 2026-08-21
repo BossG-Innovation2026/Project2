@@ -13,6 +13,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { assetUrl, useBrand } from "../context/BrandContext";
 import { Button } from "./ui";
+import { ThemeToggle } from "./ThemeToggle";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, adminOnly: false },
@@ -32,7 +33,7 @@ export default function Layout() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-canvas flex">
       <aside className="w-60 bg-slate-900 text-slate-300 flex flex-col fixed inset-y-0 left-0 z-40">
         <div className="px-5 py-5 border-b border-slate-800">
           <div className="flex items-center gap-2.5">
@@ -80,6 +81,7 @@ export default function Layout() {
             <Button variant="ghost" size="sm" className="text-slate-300 hover:bg-slate-800" onClick={() => void logout()}>
               <LogOut size={14} /> Logout
             </Button>
+            <ThemeToggle className="text-slate-300 hover:bg-slate-800 px-2.5 py-1.5 self-start" />
           </div>
         </div>
       </aside>

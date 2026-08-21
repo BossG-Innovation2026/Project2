@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { api, type Absence, type ReliefRow, type Teacher } from "../api";
 import { usePolling } from "../hooks/usePolling";
 import { Card, CardHeader, Badge, Button, Modal, Spinner, EmptyState, Flash, Select } from "../components/ui";
@@ -107,8 +107,8 @@ export default function Relief() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">Reliever Finder</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-xl font-bold text-fg">Reliever Finder</h1>
+          <p className="text-sm text-muted">
             {isAdmin ? "Assign relievers to approved leaves" : "Your relief assignments and invitations"}
           </p>
         </div>
@@ -127,15 +127,15 @@ export default function Relief() {
             {approvedAbsences.map((a) => (
               <div key={a.id} className="flex items-center justify-between px-3 py-2.5 border-b border-slate-50 last:border-0">
                 <div>
-                  <div className="text-sm font-medium text-slate-700">{a.teacher_name}</div>
-                  <div className="text-xs text-slate-500">{prettyDate(a.date)} · Period {a.period}{a.reason ? ` · ${a.reason}` : ""}</div>
+                  <div className="text-sm font-medium text-fg">{a.teacher_name}</div>
+                  <div className="text-xs text-muted">{prettyDate(a.date)} Â· Period {a.period}{a.reason ? ` Â· ${a.reason}` : ""}</div>
                 </div>
                 <div className="flex items-center gap-2">
                   {assignments
                     .filter((r) => r.absence_id === a.id)
                     .map((r) => (
                       <Badge key={r.id} className={RELIEF_STATUS_STYLE[r.status]}>
-                        {r.reliever_name} · {r.status}
+                        {r.reliever_name} Â· {r.status}
                       </Badge>
                     ))}
                   <Button size="sm" onClick={() => void openAssign(a)}>Match reliever</Button>
@@ -153,7 +153,7 @@ export default function Relief() {
           {assignments.map((r) => (
             <div key={r.id} className="flex items-center justify-between px-3 py-2.5 border-b border-slate-50 last:border-0">
               <div>
-                <div className="text-sm font-medium text-slate-700">
+                <div className="text-sm font-medium text-fg">
                   {r.reliever_name} covers {r.absent_teacher_name}
                   {r.is_override === 1 && (
                     <span className="ml-2 inline-flex items-center gap-0.5 text-orange-600 text-xs">
@@ -161,8 +161,8 @@ export default function Relief() {
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-slate-500">
-                  {prettyDate(r.date)} · Period {r.period} · {r.class_name || r.subject || "—"}
+                <div className="text-xs text-muted">
+                  {prettyDate(r.date)} Â· Period {r.period} Â· {r.class_name || r.subject || "â€”"}
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -186,16 +186,16 @@ export default function Relief() {
       <Modal open={!!assigning} onClose={() => setAssigning(null)} title="Match a reliever" wide>
         {assigning && (
           <div className="space-y-4">
-            <div className="rounded-lg bg-slate-50 p-3 text-sm">
-              <span className="font-medium text-slate-700">{assigning.absence.teacher_name}</span>
-              <span className="text-slate-500">
-                {" "}— {prettyDate(assigning.absence.date)}, Period {assigning.absence.period}
+            <div className="rounded-lg bg-subtle p-3 text-sm">
+              <span className="font-medium text-fg">{assigning.absence.teacher_name}</span>
+              <span className="text-muted">
+                {" "}â€” {prettyDate(assigning.absence.date)}, Period {assigning.absence.period}
                 {assigning.absence.reason ? ` (${assigning.absence.reason})` : ""}
               </span>
             </div>
 
             <div>
-              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+              <div className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
                 Recommended (auto-ranked: least workload first)
               </div>
               {assigning.candidates.length === 0 && (
@@ -203,13 +203,13 @@ export default function Relief() {
               )}
               <div className="space-y-2">
                 {assigning.candidates.map((c) => (
-                  <div key={c.teacher_id} className="rounded-lg border border-slate-200 px-4 py-3">
+                  <div key={c.teacher_id} className="rounded-lg border border-line px-4 py-3">
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="text-sm font-medium text-slate-700">{c.name}</div>
-                        <div className="text-xs text-slate-500 truncate">
-                          {[c.department, c.subjects, c.cluster, c.room].filter(Boolean).join(" · ") || "—"}
-                          {" "}· workload this week: {c.workload_this_week}
+                        <div className="text-sm font-medium text-fg">{c.name}</div>
+                        <div className="text-xs text-muted truncate">
+                          {[c.department, c.subjects, c.cluster, c.room].filter(Boolean).join(" Â· ") || "â€”"}
+                          {" "}Â· workload this week: {c.workload_this_week}
                         </div>
                       </div>
                       <Button size="sm" onClick={() => void assign(assigning.absence.id, c.teacher_id, false)}>
@@ -217,23 +217,23 @@ export default function Relief() {
                       </Button>
                     </div>
                     <div className="mt-2 grid grid-cols-3 gap-1.5 text-[11px]">
-                      <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1 min-w-0">
-                        <div className="font-semibold uppercase tracking-wide text-slate-400">Before · P{assigning.absence.period - 1}</div>
-                        <div className="text-slate-600 truncate">
+                      <div className="rounded border border-line bg-subtle px-2 py-1 min-w-0">
+                        <div className="font-semibold uppercase tracking-wide text-dim">Before Â· P{assigning.absence.period - 1}</div>
+                        <div className="text-muted truncate">
                           {c.schedule_before
-                            ? `${c.schedule_before.subject || "—"}${c.schedule_before.class_name ? ` (${c.schedule_before.class_name})` : ""}`
+                            ? `${c.schedule_before.subject || "â€”"}${c.schedule_before.class_name ? ` (${c.schedule_before.class_name})` : ""}`
                             : "Free"}
                         </div>
                       </div>
                       <div className="rounded border border-brand-300 bg-brand-50 px-2 py-1 min-w-0">
-                        <div className="font-semibold uppercase tracking-wide text-brand-700">Relief · P{assigning.absence.period}</div>
-                        <div className="text-slate-600 truncate">Covering {assigning.absence.teacher_name}</div>
+                        <div className="font-semibold uppercase tracking-wide text-brand-700">Relief Â· P{assigning.absence.period}</div>
+                        <div className="text-muted truncate">Covering {assigning.absence.teacher_name}</div>
                       </div>
-                      <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1 min-w-0">
-                        <div className="font-semibold uppercase tracking-wide text-slate-400">After · P{assigning.absence.period + 1}</div>
-                        <div className="text-slate-600 truncate">
+                      <div className="rounded border border-line bg-subtle px-2 py-1 min-w-0">
+                        <div className="font-semibold uppercase tracking-wide text-dim">After Â· P{assigning.absence.period + 1}</div>
+                        <div className="text-muted truncate">
                           {c.schedule_after
-                            ? `${c.schedule_after.subject || "—"}${c.schedule_after.class_name ? ` (${c.schedule_after.class_name})` : ""}`
+                            ? `${c.schedule_after.subject || "â€”"}${c.schedule_after.class_name ? ` (${c.schedule_after.class_name})` : ""}`
                             : "Free"}
                         </div>
                       </div>
@@ -243,23 +243,23 @@ export default function Relief() {
               </div>
             </div>
 
-            <div className="border-t border-slate-100 pt-4">
+            <div className="border-t border-line pt-4">
               <div className="flex items-center gap-2 mb-2">
                 <input
                   type="checkbox"
                   id="override"
                   checked={override}
                   onChange={(e) => setOverride(e.target.checked)}
-                  className="rounded border-slate-300"
+                  className="rounded border-line-strong"
                 />
-                <label htmlFor="override" className="text-sm text-slate-700 inline-flex items-center gap-1">
+                <label htmlFor="override" className="text-sm text-fg inline-flex items-center gap-1">
                   <ShieldAlert size={14} className="text-orange-500" /> Manual override (bypasses conflict checks)
                 </label>
               </div>
               {override && (
                 <div className="flex items-center gap-2">
                   <Select value={overrideTeacher} onChange={(e) => setOverrideTeacher(Number(e.target.value))} className="flex-1">
-                    <option value={0}>Select any teacher…</option>
+                    <option value={0}>Select any teacherâ€¦</option>
                     {(teachers?.teachers ?? [])
                       .filter((t) => t.id !== assigning.absence.teacher_id)
                       .map((t) => (

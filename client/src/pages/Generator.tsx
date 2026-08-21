@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
 import type { Teacher } from "../api";
@@ -204,7 +204,7 @@ export default function Generator() {
       ps.sort((a, b) => a - b);
       for (let i = 0; i < ps.length; i++) {
         if (ps[i] !== i + 1) {
-          setDropError("Move rejected — periods must stay compressed with no gaps");
+          setDropError("Move rejected â€” periods must stay compressed with no gaps");
           return;
         }
       }
@@ -224,13 +224,13 @@ export default function Generator() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Schedule Generator</h1>
-          <p className="text-sm text-slate-500 mt-1">Simulate a full timetable, then confirm to apply it.</p>
+          <h1 className="text-2xl font-bold text-fg">Schedule Generator</h1>
+          <p className="text-sm text-muted mt-1">Simulate a full timetable, then confirm to apply it.</p>
         </div>
         <Card className="p-10 text-center">
-          <div className="text-4xl mb-3">✓</div>
-          <h2 className="text-lg font-semibold text-slate-800">Timetable applied</h2>
-          <p className="text-sm text-slate-500 mt-1">
+          <div className="text-4xl mb-3">âœ“</div>
+          <h2 className="text-lg font-semibold text-fg">Timetable applied</h2>
+          <p className="text-sm text-muted mt-1">
             {applied} schedule entries were written to Class Schedules.
           </p>
           <div className="mt-5 flex justify-center gap-3">
@@ -254,8 +254,8 @@ export default function Generator() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">Schedule Generator</h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <h1 className="text-2xl font-bold text-fg">Schedule Generator</h1>
+        <p className="text-sm text-muted mt-1">
           Simulate a full timetable, review it class by class, then confirm to replace Class Schedules.
         </p>
       </div>
@@ -266,7 +266,7 @@ export default function Generator() {
         <Card>
           <CardHeader
             title="Curriculum matrix"
-            subtitle={`Sessions per week for each class × subject · ${totals} total session${totals === 1 ? "" : "s"} entered`}
+            subtitle={`Sessions per week for each class Ã— subject Â· ${totals} total session${totals === 1 ? "" : "s"} entered`}
           />
           {classes.length === 0 || subjects.length === 0 ? (
             <EmptyState message="Add classes and subjects in Settings first." />
@@ -275,11 +275,11 @@ export default function Generator() {
               <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr>
-                    <th className="text-left py-2 pr-3 font-medium text-slate-600 sticky left-0 bg-white">Class</th>
+                    <th className="text-left py-2 pr-3 font-medium text-muted sticky left-0 bg-surface">Class</th>
                     {subjects.map((s) => (
-                      <th key={s} className="px-2 py-2 font-medium text-slate-600 min-w-24">
+                      <th key={s} className="px-2 py-2 font-medium text-muted min-w-24">
                         <div>{s}</div>
-                        <div className="text-[10px] font-normal text-slate-400">
+                        <div className="text-[10px] font-normal text-dim">
                           {(specialistCount.get(s) ?? 0) > 0
                             ? `${specialistCount.get(s)} specialist${specialistCount.get(s) === 1 ? "" : "s"}`
                             : "no specialist"}
@@ -290,11 +290,11 @@ export default function Generator() {
                 </thead>
                 <tbody>
                   {classes.map((cls) => (
-                    <tr key={cls} className="border-t border-slate-100">
-                      <td className="py-2 pr-3 font-medium text-slate-700 whitespace-nowrap sticky left-0 bg-white">
+                    <tr key={cls} className="border-t border-line">
+                      <td className="py-2 pr-3 font-medium text-fg whitespace-nowrap sticky left-0 bg-surface">
                         {cls}
                         {clusters[cls] && (
-                          <Badge className="ml-2 bg-slate-100 text-slate-700 border-slate-200">{clusters[cls]}</Badge>
+                          <Badge className="ml-2 bg-hov text-fg border-line">{clusters[cls]}</Badge>
                         )}
                       </td>
                       {subjects.map((s) => (
@@ -308,7 +308,7 @@ export default function Generator() {
                             className={`w-full rounded-md border px-2 py-1.5 text-center ${
                               (matrix[cls]?.[s] ?? 0) > 0 && (specialistCount.get(s) ?? 0) === 0
                                 ? "border-red-300 bg-red-50 text-red-700"
-                                : "border-slate-200 focus:border-brand-400"
+                                : "border-line focus:border-brand-400"
                             }`}
                           />
                         </td>
@@ -317,19 +317,19 @@ export default function Generator() {
                   ))}
                 </tbody>
               </table>
-              <p className="text-xs text-slate-400 mt-3">
-                Red cells have no teacher who specializes in that subject — add specializations in Teachers, or those sessions will be left unplaced.
+              <p className="text-xs text-dim mt-3">
+                Red cells have no teacher who specializes in that subject â€” add specializations in Teachers, or those sessions will be left unplaced.
               </p>
               {overFive.length > 0 && (
                 <p className="text-xs font-medium text-amber-600 mt-2">
-                  Values above 5 are capped at 5 — a subject cannot meet twice in one day ({overFive.length} cell{overFive.length === 1 ? "" : "s"} affected).
+                  Values above 5 are capped at 5 â€” a subject cannot meet twice in one day ({overFive.length} cell{overFive.length === 1 ? "" : "s"} affected).
                 </p>
               )}
               {overCapacity.length > 0 && (
                 <div className="mt-2 space-y-1">
                   {overCapacity.map(({ cls, n }) => (
                     <p key={cls} className="text-xs font-medium text-red-500">
-                      {cls}: {n} sessions but only {weeklyCapacity} weekly slots ({periodCount} periods × 5 days) — some will be left unplaced.
+                      {cls}: {n} sessions but only {weeklyCapacity} weekly slots ({periodCount} periods Ã— 5 days) â€” some will be left unplaced.
                     </p>
                   ))}
                 </div>
@@ -338,7 +338,7 @@ export default function Generator() {
           )}
           <div className="flex justify-end gap-3 px-4 pb-4">
             <Button disabled={busy || totals === 0} onClick={() => simulate()}>
-              {busy ? <Spinner label="Simulating…" /> : "Simulate timetable"}
+              {busy ? <Spinner label="Simulatingâ€¦" /> : "Simulate timetable"}
             </Button>
           </div>
         </Card>
@@ -348,27 +348,27 @@ export default function Generator() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Card className="p-4">
                 <div className="text-2xl font-bold text-emerald-600">{result.entries.length}</div>
-                <div className="text-xs text-slate-500">sessions placed</div>
+                <div className="text-xs text-muted">sessions placed</div>
               </Card>
               <Card className="p-4">
                 <div className="text-2xl font-bold text-red-500">{result.unplaced.reduce((a, u) => a + u.sessions, 0)}</div>
-                <div className="text-xs text-slate-500">sessions unplaced</div>
+                <div className="text-xs text-muted">sessions unplaced</div>
               </Card>
               <Card className="p-4">
-                <div className="text-2xl font-bold text-slate-800">{new Set(result.entries.map((e) => e.teacher_id)).size}</div>
-                <div className="text-xs text-slate-500">teachers used</div>
+                <div className="text-2xl font-bold text-fg">{new Set(result.entries.map((e) => e.teacher_id)).size}</div>
+                <div className="text-xs text-muted">teachers used</div>
               </Card>
             </div>
 
             {result.unplaced.length > 0 && (
               <Card>
-                <CardHeader title="Unplaced sessions" subtitle="These could not fit under the hard rules — adjust loads or specializations and regenerate." />
-                <ul className="divide-y divide-slate-100">
+                <CardHeader title="Unplaced sessions" subtitle="These could not fit under the hard rules â€” adjust loads or specializations and regenerate." />
+                <ul className="divide-y divide-line">
                   {result.unplaced.map((u) => (
                     <li key={`${u.class_name}|${u.subject}`} className="px-4 py-2.5 flex items-center justify-between text-sm">
-                      <span className="font-medium text-slate-700">{u.class_name} · {u.subject}</span>
+                      <span className="font-medium text-fg">{u.class_name} Â· {u.subject}</span>
                       <span className="flex items-center gap-2">
-                        <span className="text-slate-400">×{u.sessions}</span>
+                        <span className="text-dim">Ã—{u.sessions}</span>
                         <Badge className="bg-red-50 text-red-600 border-red-200">{u.reason}</Badge>
                       </span>
                     </li>
@@ -380,7 +380,7 @@ export default function Generator() {
               <Card>
                 <CardHeader
                   title="Simulated timetable"
-                  subtitle="Simulation only — drag cells to move or swap. Nothing is saved until you confirm."
+                  subtitle="Simulation only â€” drag cells to move or swap. Nothing is saved until you confirm."
                   actions={
                     <Select value={viewClass} onChange={(e) => setViewClass(e.target.value)} className="w-44">
                       {classes.map((c) => (
@@ -406,16 +406,16 @@ export default function Generator() {
                   <table className="w-full border-collapse text-xs">
                     <thead>
                       <tr>
-                        <th className="sticky left-0 bg-white z-10 w-16"></th>
+                        <th className="sticky left-0 bg-surface z-10 w-16"></th>
                         {SCHOOL_DAYS.map((d) => (
-                          <th key={d} className="py-2 px-1 text-slate-500 font-medium">{d}</th>
+                          <th key={d} className="py-2 px-1 text-muted font-medium">{d}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {Array.from({ length: periodCount }, (_, i) => i + 1).map((p) => (
                         <tr key={p}>
-                          <td className="sticky left-0 bg-white z-10 font-medium text-slate-500 py-1 pr-2 text-right align-middle">P{p}</td>
+                          <td className="sticky left-0 bg-surface z-10 font-medium text-muted py-1 pr-2 text-right align-middle">P{p}</td>
                           {SCHOOL_DAYS.map((_, wd) => {
                             const cell = previewEntries.find((e) => e.weekday === wd && e.period === p);
                             const key = `${wd}|${p}`;
@@ -453,7 +453,7 @@ export default function Generator() {
                                     <div className="truncate opacity-75">{cell.subject}</div>
                                   </div>
                                 ) : (
-                                  <div className={`rounded-md border border-dashed border-slate-200 h-full min-h-10 ${hovered ? "ring-2 ring-brand-400" : ""}`} />
+                                  <div className={`rounded-md border border-dashed border-line h-full min-h-10 ${hovered ? "ring-2 ring-brand-400" : ""}`} />
                                 )}
                               </td>
                             );
@@ -478,14 +478,14 @@ export default function Generator() {
       {confirmOpen && (
         <Modal open onClose={() => setConfirmOpen(false)} title="Apply simulated timetable?">
           <div className="space-y-4">
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-muted">
               This will <strong className="text-red-600">replace the entire Class Schedules</strong> with the{" "}
               {result?.entries.length} simulated entries. The current timetable will be permanently overwritten.
             </p>
             <div className="flex justify-end gap-3">
               <Button variant="secondary" onClick={() => setConfirmOpen(false)}>Cancel</Button>
               <Button disabled={busy} onClick={apply}>
-                {busy ? <Spinner label="Applying…" /> : "Yes, replace everything"}
+                {busy ? <Spinner label="Applyingâ€¦" /> : "Yes, replace everything"}
               </Button>
             </div>
           </div>

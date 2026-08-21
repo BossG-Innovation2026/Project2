@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+﻿import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { api, type ScheduleRow, type Teacher } from "../api";
 import { usePolling } from "../hooks/usePolling";
 import { useBrand } from "../context/BrandContext";
@@ -96,16 +96,16 @@ export default function Schedules() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">Class Schedules</h1>
-          <p className="text-sm text-slate-500">Weekly recurring classes — used for conflict detection</p>
+          <h1 className="text-xl font-bold text-fg">Class Schedules</h1>
+          <p className="text-sm text-muted">Weekly recurring classes â€” used for conflict detection</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5">
+          <div className="inline-flex rounded-lg border border-line bg-surface p-0.5">
             <button
               type="button"
               onClick={() => setViewMode("class")}
               className={`px-3 py-1.5 text-sm rounded-md font-medium transition-colors ${
-                viewMode === "class" ? "bg-brand-600 text-white" : "text-slate-600 hover:text-slate-800"
+                viewMode === "class" ? "bg-brand-600 text-white" : "text-muted hover:text-fg"
               }`}
             >
               By class
@@ -114,7 +114,7 @@ export default function Schedules() {
               type="button"
               onClick={() => setViewMode("teacher")}
               className={`px-3 py-1.5 text-sm rounded-md font-medium transition-colors ${
-                viewMode === "teacher" ? "bg-brand-600 text-white" : "text-slate-600 hover:text-slate-800"
+                viewMode === "teacher" ? "bg-brand-600 text-white" : "text-muted hover:text-fg"
               }`}
             >
               By teacher
@@ -127,7 +127,7 @@ export default function Schedules() {
                 onClick={() => (locked ? setPwDialog({ purpose: "unlock" }) : setLocked(true))}
                 className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                   locked
-                    ? "border-slate-200 bg-white text-slate-600 hover:text-slate-800"
+                    ? "border-line bg-surface text-muted hover:text-fg"
                     : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                 }`}
               >
@@ -161,49 +161,49 @@ export default function Schedules() {
       {viewMode === "class" &&
         (classOptions.length === 0 ? (
           <Card>
-            <EmptyState message="No classes yet — define classes in Settings first." />
+            <EmptyState message="No classes yet â€” define classes in Settings first." />
           </Card>
         ) : (
           <Card>
             <CardHeader
-              title={`${classFilter} · weekly timetable`}
+              title={`${classFilter} Â· weekly timetable`}
               subtitle={
                 locked
-                  ? "Locked — click any slot to unlock with your password"
-                  : `Periods 1–${data.period_count} · click a slot to assign or edit`
+                  ? "Locked â€” click any slot to unlock with your password"
+                  : `Periods 1â€“${data.period_count} Â· click a slot to assign or edit`
               }
             />
             <div className="p-5 overflow-x-auto">
               <table className="w-full text-sm border-collapse min-w-[720px]">
                 <thead>
                   <tr>
-                    <th className="text-left text-xs font-semibold uppercase tracking-wide text-slate-400 pb-2 pr-3 w-16">Period</th>
+                    <th className="text-left text-xs font-semibold uppercase tracking-wide text-dim pb-2 pr-3 w-16">Period</th>
                     {SCHOOL_DAYS.map((d) => (
-                      <th key={d} className="text-left text-xs font-semibold uppercase tracking-wide text-slate-400 pb-2 px-1.5">{d}</th>
+                      <th key={d} className="text-left text-xs font-semibold uppercase tracking-wide text-dim pb-2 px-1.5">{d}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {Array.from({ length: data.period_count }, (_, i) => i + 1).map((p) => (
                     <tr key={p}>
-                      <td className="py-1 pr-3 text-xs font-medium text-slate-500 whitespace-nowrap">P{p}</td>
+                      <td className="py-1 pr-3 text-xs font-medium text-muted whitespace-nowrap">P{p}</td>
                       {SCHOOL_DAYS.map((d, wd) => {
                         const cell = byCell.get(`${wd}-${p}`);
                         return (
                           <td key={d} className="px-1.5 py-1.5 align-top">
                             {cell ? (
                               locked ? (
-                                <div className="rounded-lg border border-slate-200 bg-slate-50/60 px-2.5 py-1.5">
-                                  <div className="text-xs font-semibold text-slate-700 truncate">{cell.teacher_name}</div>
-                                  <div className="text-[11px] text-slate-400 truncate">{cell.subject || "—"}</div>
+                                <div className="rounded-lg border border-line bg-subtle/60 px-2.5 py-1.5">
+                                  <div className="text-xs font-semibold text-fg truncate">{cell.teacher_name}</div>
+                                  <div className="text-[11px] text-dim truncate">{cell.subject || "â€”"}</div>
                                 </div>
                               ) : (
                                 <div
-                                  className="group relative rounded-lg border border-slate-200 bg-slate-50/60 px-2.5 py-1.5 cursor-pointer hover:border-brand-400 transition-colors"
+                                  className="group relative rounded-lg border border-line bg-subtle/60 px-2.5 py-1.5 cursor-pointer hover:border-brand-400 transition-colors"
                                   onClick={() => handleCellClick(wd, p, cell)}
                                 >
-                                  <div className="text-xs font-semibold text-slate-700 pr-4 truncate">{cell.teacher_name}</div>
-                                  <div className="text-[11px] text-slate-400 truncate">{cell.subject || "—"}</div>
+                                  <div className="text-xs font-semibold text-fg pr-4 truncate">{cell.teacher_name}</div>
+                                  <div className="text-[11px] text-dim truncate">{cell.subject || "â€”"}</div>
                                   <button
                                     type="button"
                                     onClick={(e) => {
@@ -211,19 +211,19 @@ export default function Schedules() {
                                       requestDelete(cell.id);
                                     }}
                                     aria-label="Remove entry"
-                                    className="absolute top-1 right-1 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    className="absolute top-1 right-1 text-dim hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity"
                                   >
                                     <Trash2 size={12} />
                                   </button>
                                 </div>
                               )
                             ) : locked ? (
-                              <div className="rounded-lg border border-dashed border-slate-100 px-2.5 py-1.5 text-[11px] text-slate-300">—</div>
+                              <div className="rounded-lg border border-dashed border-line px-2.5 py-1.5 text-[11px] text-dim">â€”</div>
                             ) : (
                               <button
                                 type="button"
                                 onClick={() => handleCellClick(wd, p, null)}
-                                className="w-full rounded-lg border border-dashed border-slate-200 px-2.5 py-1.5 text-[11px] text-slate-300 hover:border-brand-400 hover:bg-slate-50 hover:text-brand-600 transition-colors"
+                                className="w-full rounded-lg border border-dashed border-line px-2.5 py-1.5 text-[11px] text-dim hover:border-brand-400 hover:bg-slate-50 hover:text-brand-600 transition-colors"
                               >
                                 + Assign
                               </button>
@@ -251,14 +251,14 @@ export default function Schedules() {
                   {rows.map((r) => (
                     <div key={r.id} className="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-slate-50 group">
                       <div>
-                        <div className="text-xs font-medium text-slate-700">
-                          P{r.period} · {r.subject || "—"}
+                        <div className="text-xs font-medium text-fg">
+                          P{r.period} Â· {r.subject || "â€”"}
                         </div>
-                        <div className="text-[11px] text-slate-400">{r.teacher_name}{r.class_name ? ` · ${r.class_name}` : ""}</div>
+                        <div className="text-[11px] text-dim">{r.teacher_name}{r.class_name ? ` Â· ${r.class_name}` : ""}</div>
                       </div>
                       <button
                         onClick={() => void removeTeacherEntry(r.id)}
-                        className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="text-dim hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <Trash2 size={13} />
                       </button>
@@ -435,7 +435,7 @@ function SlotModal({
           {selectable ? (
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Day</label>
+                <label className="block text-sm font-medium text-fg mb-1">Day</label>
                 <Select value={weekday} onChange={(e) => setWeekday(Number(e.target.value))}>
                   {SCHOOL_DAYS.map((d, i) => (
                     <option key={d} value={i}>{d}</option>
@@ -443,7 +443,7 @@ function SlotModal({
                 </Select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Period</label>
+                <label className="block text-sm font-medium text-fg mb-1">Period</label>
                 <Select value={period} onChange={(e) => setPeriod(Number(e.target.value))}>
                   {Array.from({ length: periodCount }, (_, i) => (
                     <option key={i + 1} value={i + 1}>Period {i + 1}</option>
@@ -451,10 +451,10 @@ function SlotModal({
                 </Select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Class</label>
+                <label className="block text-sm font-medium text-fg mb-1">Class</label>
                 {classOptions.length > 0 ? (
                   <Select value={className} onChange={(e) => setClassName(e.target.value)}>
-                    <option value="">Select class…</option>
+                    <option value="">Select classâ€¦</option>
                     {classOptions.map((c) => (
                       <option key={c} value={c}>{c}</option>
                     ))}
@@ -465,38 +465,38 @@ function SlotModal({
               </div>
             </div>
           ) : (
-            <div className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 text-sm text-slate-600">
-              <span className="font-medium text-slate-700">{WEEKDAYS[weekday]}</span>
-              <span className="text-slate-300">·</span>
+            <div className="flex flex-wrap items-center gap-2 rounded-lg bg-subtle border border-line px-3 py-2 text-sm text-muted">
+              <span className="font-medium text-fg">{WEEKDAYS[weekday]}</span>
+              <span className="text-dim">Â·</span>
               <span>Period {period}</span>
               {contextClass && (
                 <>
-                  <span className="text-slate-300">·</span>
-                  <span className="font-medium text-slate-700">{contextClass}</span>
+                  <span className="text-dim">Â·</span>
+                  <span className="font-medium text-fg">{contextClass}</span>
                 </>
               )}
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Teacher</label>
+            <label className="block text-sm font-medium text-fg mb-1">Teacher</label>
             <Select value={teacherId} onChange={(e) => setTeacherId(Number(e.target.value))} required>
               <option value={0}>
-                {teacherOptions.length > 0 ? "Select teacher…" : "No teachers available"}
+                {teacherOptions.length > 0 ? "Select teacherâ€¦" : "No teachers available"}
               </option>
               {teacherOptions.map((t) => (
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
             </Select>
-            <p className="mt-1 text-xs text-slate-400">
-              {teacherOptions.length} of {activeTeachers.length} teachers available — those already teaching at this
+            <p className="mt-1 text-xs text-dim">
+              {teacherOptions.length} of {activeTeachers.length} teachers available â€” those already teaching at this
               time or at their weekly load cap are hidden.
             </p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Subject</label>
+            <label className="block text-sm font-medium text-fg mb-1">Subject</label>
             {subjectOptions.length > 0 ? (
               <Select value={subject} onChange={(e) => setSubject(e.target.value)}>
-                <option value="">Select subject…</option>
+                <option value="">Select subjectâ€¦</option>
                 {subjectOptions.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
@@ -511,7 +511,7 @@ function SlotModal({
                 type="button"
                 onClick={() => setRemoveAskPw(true)}
                 disabled={busy}
-                className="rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 transition-colors"
+                className="rounded-lg border border-rose-200 bg-surface px-3 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 transition-colors"
               >
                 Remove
               </button>
@@ -521,7 +521,7 @@ function SlotModal({
             <div className="flex gap-2">
               <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
               <Button type="submit" disabled={busy || !teacherId || teacherOptions.length === 0}>
-                {busy ? "Saving…" : isEdit ? "Save changes" : "Assign"}
+                {busy ? "Savingâ€¦" : isEdit ? "Save changes" : "Assign"}
               </Button>
             </div>
           </div>
@@ -588,7 +588,7 @@ function PasswordModal({
   return (
     <Modal open onClose={onClose} title={title}>
       <form onSubmit={submit} className="space-y-4">
-        {subtitle && <p className="text-sm text-slate-500">{subtitle}</p>}
+        {subtitle && <p className="text-sm text-muted">{subtitle}</p>}
         <Flash error={error} />
         <Input
           type="password"
@@ -599,7 +599,7 @@ function PasswordModal({
         />
         <div className="flex justify-end gap-2 pt-1">
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={busy || !pw}>{busy ? "Verifying…" : "Confirm"}</Button>
+          <Button type="submit" disabled={busy || !pw}>{busy ? "Verifyingâ€¦" : "Confirm"}</Button>
         </div>
       </form>
     </Modal>

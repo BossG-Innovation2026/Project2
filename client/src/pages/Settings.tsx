@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+﻿import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { api } from "../api";
 import { assetUrl, useBrand } from "../context/BrandContext";
 import { Card, CardHeader, Button, Input, Spinner, Flash, EmptyState } from "../components/ui";
@@ -72,11 +72,11 @@ function AssetUploadRow({
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 p-4 space-y-3">
+    <div className="rounded-xl border border-line p-4 space-y-3">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <div className="text-sm font-medium text-slate-700">{label}</div>
-          <div className="text-xs text-slate-400 mt-0.5">{hint}</div>
+          <div className="text-sm font-medium text-fg">{label}</div>
+          <div className="text-xs text-dim mt-0.5">{hint}</div>
         </div>
         <div className="flex items-center gap-2">
           <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={onFile} />
@@ -88,7 +88,7 @@ function AssetUploadRow({
               type="button"
               onClick={remove}
               disabled={busy}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-surface px-3 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 transition-colors"
             >
               <Trash2 size={14} /> Remove
             </button>
@@ -100,7 +100,7 @@ function AssetUploadRow({
       {current ? (
         <img src={assetUrl(name, version)} alt={label} className={previewClass} />
       ) : (
-        <div className={`flex items-center justify-center rounded-lg border border-dashed border-slate-200 text-xs text-slate-400 ${previewClass}`}>
+        <div className={`flex items-center justify-center rounded-lg border border-dashed border-line text-xs text-dim ${previewClass}`}>
           No image uploaded yet
         </div>
       )}
@@ -188,14 +188,14 @@ function ListEditorCard({
         {saved && <div className="rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-3">Saved.</div>}
         <div className="flex flex-wrap gap-2">
           {items.map((s) => (
-            <span key={s} className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200 px-3 py-1 text-sm text-slate-700">
+            <span key={s} className="inline-flex items-center gap-1.5 rounded-full bg-hov border border-line px-3 py-1 text-sm text-fg">
               {s}
-              <button type="button" onClick={() => remove(s)} className="text-slate-400 hover:text-rose-600" aria-label={`Remove ${s}`}>
+              <button type="button" onClick={() => remove(s)} className="text-dim hover:text-rose-600" aria-label={`Remove ${s}`}>
                 <X size={13} />
               </button>
             </span>
           ))}
-          {items.length === 0 && <span className="text-sm text-slate-400">{emptyHint}</span>}
+          {items.length === 0 && <span className="text-sm text-dim">{emptyHint}</span>}
         </div>
         <div className="flex gap-2">
           <Input
@@ -213,7 +213,7 @@ function ListEditorCard({
           <Button type="button" variant="secondary" onClick={add}>Add</Button>
         </div>
         <div className="flex justify-end">
-          <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save"}</Button>
+          <Button type="submit" disabled={busy}>{busy ? "Savingâ€¦" : "Save"}</Button>
         </div>
       </form>
     </Card>
@@ -346,11 +346,11 @@ export default function Settings() {
   return (
     <div className="space-y-4 max-w-2xl">
       <div>
-        <h1 className="text-xl font-bold text-slate-800">Settings</h1>
-        <p className="text-sm text-slate-500">Branding, pickers, school information and period configuration</p>
+        <h1 className="text-xl font-bold text-fg">Settings</h1>
+        <p className="text-sm text-muted">Branding, pickers, school information and period configuration</p>
       </div>
 
-      <div className="flex gap-1 border-b border-slate-200">
+      <div className="flex gap-1 border-b border-line">
         {([
           ["branding", "Branding"],
           ["lists", "Lists & Clusters"],
@@ -361,7 +361,7 @@ export default function Settings() {
             type="button"
             onClick={() => setTab(key)}
             className={`px-3 pb-2 text-sm font-medium -mb-px border-b-2 transition-colors ${
-              tab === key ? "border-brand-600 text-brand-700" : "border-transparent text-slate-500 hover:text-slate-700"
+              tab === key ? "border-brand-600 text-brand-700 dark:border-brand-400 dark:text-brand-300" : "border-transparent text-muted hover:text-fg"
             }`}
           >
             {label}
@@ -377,27 +377,27 @@ export default function Settings() {
           {brandSaved && <div className="rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-3">Branding saved. The sidebar and page title update instantly.</div>}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">System name</label>
+              <label className="block text-sm font-medium text-fg mb-1">System name</label>
               <Input value={brandName} onChange={(e) => setBrandName(e.target.value)} maxLength={60} placeholder="CSHS TRACE" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Tagline</label>
+              <label className="block text-sm font-medium text-fg mb-1">Tagline</label>
               <Input value={brandTagline} onChange={(e) => setBrandTagline(e.target.value)} maxLength={60} placeholder="Teacher Reliever Coordination" />
             </div>
           </div>
-          <p className="text-xs text-slate-400">Shown on the login page, sidebar, and browser tab.</p>
+          <p className="text-xs text-dim">Shown on the login page, sidebar, and browser tab.</p>
           <div className="flex justify-end">
-            <Button type="submit" disabled={brandBusy}>{brandBusy ? "Saving…" : "Save branding"}</Button>
+            <Button type="submit" disabled={brandBusy}>{brandBusy ? "Savingâ€¦" : "Save branding"}</Button>
           </div>
         </form>
-        <div className="px-5 pb-5 space-y-4 border-t border-slate-100 pt-4">
+        <div className="px-5 pb-5 space-y-4 border-t border-line pt-4">
           <AssetUploadRow
             name="logo"
             label="Logo"
             hint="Appears in the sidebar, login page, and browser tab. PNG/JPEG/WebP/SVG up to 2 MB."
             current={hasLogo}
             version={assetsVersion}
-            previewClass="h-16 w-16 object-contain rounded-lg bg-slate-50 border border-slate-200 p-1.5"
+            previewClass="h-16 w-16 object-contain rounded-lg bg-subtle border border-line p-1.5"
           />
           <AssetUploadRow
             name="background"
@@ -419,7 +419,7 @@ export default function Settings() {
         items={subjectList}
         onItemsChange={setSubjectList}
         onSave={saveSubjects}
-        emptyHint="No subjects defined yet — specialization and schedule fields will stay free-text until you add some."
+        emptyHint="No subjects defined yet â€” specialization and schedule fields will stay free-text until you add some."
         addPlaceholder="Add a subject (e.g. Mathematics)"
       />
 
@@ -429,7 +429,7 @@ export default function Settings() {
         items={departmentList}
         onItemsChange={setDepartmentList}
         onSave={saveDepartments}
-        emptyHint="No departments defined yet — the Teachers form will use its built-in defaults until you add some."
+        emptyHint="No departments defined yet â€” the Teachers form will use its built-in defaults until you add some."
         addPlaceholder="Add a department (e.g. Science)"
       />
 
@@ -439,14 +439,14 @@ export default function Settings() {
         items={classList}
         onItemsChange={setClassList}
         onSave={saveClasses}
-        emptyHint="No classes defined yet — the schedule form will stay free-text until you add some."
+        emptyHint="No classes defined yet â€” the schedule form will stay free-text until you add some."
         addPlaceholder="Add a class (e.g. 7-A)"
       />
 
       <Card>
         <CardHeader
           title="Class Clusters"
-          subtitle="Classes in the same cluster share one teacher per subject in the Schedule Generator — max 4 classes per cluster"
+          subtitle="Classes in the same cluster share one teacher per subject in the Schedule Generator â€” max 4 classes per cluster"
         />
         <div className="px-5 pb-5 space-y-3">
           {classList.length === 0 ? (
@@ -455,7 +455,7 @@ export default function Settings() {
             <>
               {classList.map((cls) => (
                 <div key={cls} className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-slate-700 w-40 shrink-0 truncate">{cls}</span>
+                  <span className="text-sm font-medium text-fg w-40 shrink-0 truncate">{cls}</span>
                   <Input
                     value={clusterMap[cls] ?? ""}
                     onChange={(e) =>
@@ -479,15 +479,15 @@ export default function Settings() {
               </datalist>
               {overLimitClusters.map(([c, n]) => (
                 <p key={c} className="text-xs font-medium text-red-500">
-                  &quot;{c}&quot; has {n} classes — max 4 per cluster.
+                  &quot;{c}&quot; has {n} classes â€” max 4 per cluster.
                 </p>
               ))}
               <Flash error={clusterError} />
               {clusterSaved && <div className="rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-3">Clusters saved.</div>}
-              <p className="text-xs text-slate-400">Leave a class blank to keep it unclustered (it schedules independently).</p>
+              <p className="text-xs text-dim">Leave a class blank to keep it unclustered (it schedules independently).</p>
               <div className="flex justify-end">
                 <Button disabled={clusterBusy || overLimitClusters.length > 0} onClick={saveClusters}>
-                  {clusterBusy ? "Saving…" : "Save clusters"}
+                  {clusterBusy ? "Savingâ€¦" : "Save clusters"}
                 </Button>
               </div>
             </>
@@ -505,16 +505,16 @@ export default function Settings() {
           {saved && <div className="rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-3">Settings saved.</div>}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">School name</label>
+              <label className="block text-sm font-medium text-fg mb-1">School name</label>
               <Input value={schoolName} onChange={(e) => setSchoolName(e.target.value)} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">School year</label>
+              <label className="block text-sm font-medium text-fg mb-1">School year</label>
               <Input value={schoolYear} onChange={(e) => setSchoolYear(e.target.value)} placeholder="2026-2027" />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className="block text-sm font-medium text-fg mb-1">
               Periods per day ({data.period_count})
             </label>
             <input
@@ -533,7 +533,7 @@ export default function Settings() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Period names</label>
+            <label className="block text-sm font-medium text-fg mb-2">Period names</label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {names.map((n, i) => (
                 <Input key={i} value={n} onChange={(e) => setNames((ns) => ns.map((x, j) => (j === i ? e.target.value : x)))} />
@@ -541,7 +541,7 @@ export default function Settings() {
             </div>
           </div>
           <div className="flex justify-end">
-            <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save settings"}</Button>
+            <Button type="submit" disabled={busy}>{busy ? "Savingâ€¦" : "Save settings"}</Button>
           </div>
         </form>
       </Card>

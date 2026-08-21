@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+﻿import { useMemo, useState, type FormEvent } from "react";
 import { api, type Teacher } from "../api";
 import { usePolling } from "../hooks/usePolling";
 import { useBrand } from "../context/BrandContext";
@@ -50,8 +50,8 @@ export default function Teachers() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">Teachers</h1>
-          <p className="text-sm text-slate-500">{teachers.length} teachers · {active} active</p>
+          <h1 className="text-xl font-bold text-fg">Teachers</h1>
+          <p className="text-sm text-muted">{teachers.length} teachers Â· {active} active</p>
         </div>
         <Button onClick={() => setCreating(true)}>
           <Plus size={15} /> Add teacher
@@ -63,7 +63,7 @@ export default function Teachers() {
       <Card className="overflow-x-auto">
         <table className="w-full text-sm min-w-[980px]">
           <thead>
-            <tr className="bg-slate-50 text-left text-xs font-semibold text-slate-500">
+            <tr className="bg-subtle text-left text-xs font-semibold text-muted">
               <th className="px-4 py-2.5">Name</th>
               <th className="px-4 py-2.5">Department</th>
               <th className="px-4 py-2.5">Specialization</th>
@@ -76,18 +76,18 @@ export default function Teachers() {
           </thead>
           <tbody>
             {teachers.map((t) => (
-              <tr key={t.id} className="border-t border-slate-100 hover:bg-slate-50/60">
+              <tr key={t.id} className="border-t border-line hover:bg-slate-50/60">
                 <td className="px-4 py-2.5">
-                  <div className="font-medium text-slate-700">{t.name}</div>
-                  <div className="text-xs text-slate-400">{t.email}</div>
+                  <div className="font-medium text-fg">{t.name}</div>
+                  <div className="text-xs text-dim">{t.email}</div>
                 </td>
-                <td className="px-4 py-2.5 text-slate-600">{t.department || "—"}</td>
-                <td className="px-4 py-2.5 text-slate-600 max-w-52 truncate">{t.subjects || "—"}</td>
-                <td className="px-4 py-2.5 text-slate-600">{t.cluster || "—"}</td>
-                <td className="px-4 py-2.5 text-slate-600">{t.room || "—"}</td>
-                <td className="px-4 py-2.5 text-slate-600">{t.max_weekly_load}</td>
+                <td className="px-4 py-2.5 text-muted">{t.department || "â€”"}</td>
+                <td className="px-4 py-2.5 text-muted max-w-52 truncate">{t.subjects || "â€”"}</td>
+                <td className="px-4 py-2.5 text-muted">{t.cluster || "â€”"}</td>
+                <td className="px-4 py-2.5 text-muted">{t.room || "â€”"}</td>
+                <td className="px-4 py-2.5 text-muted">{t.max_weekly_load}</td>
                 <td className="px-4 py-2.5">
-                  <Badge className={t.active === 1 ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}>
+                  <Badge className={t.active === 1 ? "bg-emerald-100 text-emerald-700" : "bg-hov text-muted"}>
                     {t.active === 1 ? "Active" : "Inactive"}
                   </Badge>
                 </td>
@@ -103,7 +103,7 @@ export default function Teachers() {
             ))}
           </tbody>
         </table>
-        {teachers.length === 0 && <EmptyState message="No teachers yet — add the first one" />}
+        {teachers.length === 0 && <EmptyState message="No teachers yet â€” add the first one" />}
       </Card>
 
       {(creating || editing) && (
@@ -194,28 +194,28 @@ function TeacherModal({
         <Flash error={error} />
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Full name</label>
+            <label className="block text-sm font-medium text-fg mb-1">Full name</label>
             <Input value={form.name} onChange={(e) => set("name", e.target.value)} required />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-fg mb-1">Email</label>
             <Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} required />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Department</label>
+            <label className="block text-sm font-medium text-fg mb-1">Department</label>
             <Select value={form.department} onChange={(e) => set("department", e.target.value)}>
-              <option value="">—</option>
+              <option value="">â€”</option>
               {departmentOptions.map((d) => (
                 <option key={d}>{d}</option>
               ))}
             </Select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Max weekly load (periods)</label>
+            <label className="block text-sm font-medium text-fg mb-1">Max weekly load (periods)</label>
             <Input type="number" min={1} max={60} value={form.max_weekly_load} onChange={(e) => set("max_weekly_load", Number(e.target.value))} />
           </div>
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">Specialization</label>
+            <label className="block text-sm font-medium text-fg mb-1">Specialization</label>
             {allOptions.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {allOptions.map((s) => (
@@ -224,10 +224,10 @@ function TeacherModal({
                     className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm cursor-pointer transition-colors ${
                       selectedSubjects.has(s)
                         ? "bg-brand-600 border-brand-600 text-white"
-                        : "bg-slate-50 border-slate-200 text-slate-600 hover:border-brand-400"
+                        : "bg-subtle border-line text-muted hover:border-brand-400"
                     }`}
                   >
-                    <input type="checkbox" checked={selectedSubjects.has(s)} onChange={() => toggleSubject(s)} className="rounded border-slate-300" />
+                    <input type="checkbox" checked={selectedSubjects.has(s)} onChange={() => toggleSubject(s)} className="rounded border-line-strong" />
                     {s}
                   </label>
                 ))}
@@ -237,21 +237,21 @@ function TeacherModal({
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Cluster</label>
+            <label className="block text-sm font-medium text-fg mb-1">Cluster</label>
             <Input value={form.cluster ?? ""} onChange={(e) => set("cluster", e.target.value)} placeholder="e.g. Cluster A" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Room assignment</label>
+            <label className="block text-sm font-medium text-fg mb-1">Room assignment</label>
             <Input value={form.room ?? ""} onChange={(e) => set("room", e.target.value)} placeholder="e.g. Rm 102" />
           </div>
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">{isEdit ? "New password (leave blank to keep)" : "Initial password"}</label>
+            <label className="block text-sm font-medium text-fg mb-1">{isEdit ? "New password (leave blank to keep)" : "Initial password"}</label>
             <Input type="password" value={form.password ?? ""} onChange={(e) => set("password", e.target.value)} minLength={isEdit ? undefined : 8} required={!isEdit} />
           </div>
           {isEdit && (
             <div className="col-span-2">
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input type="checkbox" checked={form.active === 1} onChange={(e) => set("active", e.target.checked ? 1 : 0)} className="rounded border-slate-300" />
+              <label className="flex items-center gap-2 text-sm text-fg">
+                <input type="checkbox" checked={form.active === 1} onChange={(e) => set("active", e.target.checked ? 1 : 0)} className="rounded border-line-strong" />
                 Account active
               </label>
             </div>
@@ -259,7 +259,7 @@ function TeacherModal({
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save"}</Button>
+          <Button type="submit" disabled={busy}>{busy ? "Savingâ€¦" : "Save"}</Button>
         </div>
       </form>
     </Modal>

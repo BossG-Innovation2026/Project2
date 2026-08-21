@@ -2,6 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --canvas: 248 250 252;
+  --surface: 255 255 255;
+  --subtle: 248 250 252;
+  --hov: 241 245 249;
+  --line: 226 232 240;
+  --line-strong: 203 213 225;
+  --fg: 30 41 59;
+  --muted: 100 116 139;
+  --dim: 148 163 184;
+}
+
+.dark {
+  --canvas: 2 6 23;
+  --surface: 15 23 42;
+  --subtle: 30 41 59;
+  --hov: 51 65 85;
+  --line: 51 65 85;
+  --line-strong: 71 85 105;
+  --fg: 241 245 249;
+  --muted: 148 163 184;
+  --dim: 100 116 139;
+}
+
 html {
   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+body {
+  @apply bg-canvas text-fg;
 }

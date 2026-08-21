@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from "react";
+﻿import { Fragment, useMemo, useState } from "react";
 import { api, type Teacher } from "../api";
 import { usePolling } from "../hooks/usePolling";
 import { Card, Badge, Select, Spinner, Flash, Button } from "../components/ui";
@@ -83,12 +83,12 @@ export default function Availability() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">Availability</h1>
-          <p className="text-sm text-slate-500">Mark your periods as available or unavailable for the coming week</p>
+          <h1 className="text-xl font-bold text-fg">Availability</h1>
+          <p className="text-sm text-muted">Mark your periods as available or unavailable for the coming week</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={() => setStartOffset((o) => o - 7)}>‹ Previous week</Button>
-          <Button variant="secondary" size="sm" onClick={() => setStartOffset((o) => o + 7)}>Next week ›</Button>
+          <Button variant="secondary" size="sm" onClick={() => setStartOffset((o) => o - 7)}>â€¹ Previous week</Button>
+          <Button variant="secondary" size="sm" onClick={() => setStartOffset((o) => o + 7)}>Next week â€º</Button>
           {isAdmin && (
             <Select value={selectedTeacher} onChange={(e) => setSelectedTeacher(Number(e.target.value))} className="w-48">
               <option value={0}>My availability</option>
@@ -104,36 +104,36 @@ export default function Availability() {
 
       <Card className="overflow-x-auto">
         <div className="grid min-w-[820px]" style={{ gridTemplateColumns: `120px repeat(${days.length}, 1fr)` }}>
-          <div className="bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500">Period</div>
+          <div className="bg-subtle px-3 py-2 text-xs font-semibold text-muted">Period</div>
           {days.map((d) => (
-            <div key={d} className="bg-slate-50 px-3 py-2 text-xs text-center">
-              <div className="font-semibold text-slate-600">{prettyDate(d)}</div>
-              <div className="text-slate-400 font-normal">{d === todayISO() ? "Today" : ""}</div>
+            <div key={d} className="bg-subtle px-3 py-2 text-xs text-center">
+              <div className="font-semibold text-muted">{prettyDate(d)}</div>
+              <div className="text-dim font-normal">{d === todayISO() ? "Today" : ""}</div>
             </div>
           ))}
           {Array.from({ length: data.period_count }, (_, p) => {
             const period = p + 1;
             return (
               <Fragment key={`row-${period}`}>
-                <div className="px-3 py-2 text-xs font-medium text-slate-600 border-t border-slate-100 flex items-center">
+                <div className="px-3 py-2 text-xs font-medium text-muted border-t border-line flex items-center">
                   {periodNames[period - 1] ?? `Period ${period}`}
                 </div>
                 {days.map((d) => {
                   const isClass = classSet.has(`${weekdayOf(d)}|${period}`);
                   const isRelief = reliefSet.has(`${d}|${period}`);
                   return (
-                    <div key={`${d}-${period}`} className="border-t border-slate-100 p-1.5">
+                    <div key={`${d}-${period}`} className="border-t border-line p-1.5">
                       {isClass ? (
                         <div
                           className={`w-full text-xs rounded-md border px-1.5 py-1.5 text-center font-medium ${PERIOD_COLORS.class}`}
-                          title="Scheduled class — locked"
+                          title="Scheduled class â€” locked"
                         >
                           Class
                         </div>
                       ) : isRelief ? (
                         <div
                           className={`w-full text-xs rounded-md border px-1.5 py-1.5 text-center font-medium ${PERIOD_COLORS.relief}`}
-                          title="Relief assignment — locked"
+                          title="Relief assignment â€” locked"
                         >
                           Relief
                         </div>
@@ -162,11 +162,11 @@ export default function Availability() {
         </div>
       </Card>
 
-      <div className="text-xs text-slate-500 flex flex-wrap gap-3 items-center">
-        <Badge className={PERIOD_COLORS.available}>Available — may be matched for relief</Badge>
-        <Badge className={PERIOD_COLORS.unavailable}>Unavailable — excluded from matching</Badge>
-        <Badge className={PERIOD_COLORS.class}>Class — scheduled (auto-locked)</Badge>
-        <Badge className={PERIOD_COLORS.relief}>Relief — covering a leave (auto-locked)</Badge>
+      <div className="text-xs text-muted flex flex-wrap gap-3 items-center">
+        <Badge className={PERIOD_COLORS.available}>Available â€” may be matched for relief</Badge>
+        <Badge className={PERIOD_COLORS.unavailable}>Unavailable â€” excluded from matching</Badge>
+        <Badge className={PERIOD_COLORS.class}>Class â€” scheduled (auto-locked)</Badge>
+        <Badge className={PERIOD_COLORS.relief}>Relief â€” covering a leave (auto-locked)</Badge>
       </div>
     </div>
   );

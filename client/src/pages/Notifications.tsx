@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type Notification } from "../api";
 import { usePolling } from "../hooks/usePolling";
@@ -14,7 +14,7 @@ const TYPE_STYLE: Record<string, string> = {
   absence_request: "bg-amber-100 text-amber-700",
   absence_approved: "bg-emerald-100 text-emerald-700",
   absence_declined: "bg-rose-100 text-rose-700",
-  daily_summary: "bg-slate-200 text-slate-600",
+  daily_summary: "bg-hov text-muted",
 };
 
 export default function NotificationsPage() {
@@ -43,8 +43,8 @@ export default function NotificationsPage() {
     <div className="space-y-4 max-w-2xl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">Notifications</h1>
-          <p className="text-sm text-slate-500">{data.unread_count} unread</p>
+          <h1 className="text-xl font-bold text-fg">Notifications</h1>
+          <p className="text-sm text-muted">{data.unread_count} unread</p>
         </div>
         <Button variant="secondary" size="sm" onClick={() => void readAll()}>
           <CheckCheck size={14} /> Mark all read
@@ -61,14 +61,14 @@ export default function NotificationsPage() {
           >
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <Badge className={TYPE_STYLE[n.type] ?? "bg-slate-100 text-slate-600"}>{n.type.replace(/_/g, " ")}</Badge>
+                <Badge className={TYPE_STYLE[n.type] ?? "bg-hov text-muted"}>{n.type.replace(/_/g, " ")}</Badge>
                 {!n.is_read && <span className="h-2 w-2 rounded-full bg-brand-600" />}
               </div>
-              <p className="text-sm text-slate-700 mt-1.5">{n.message}</p>
-              <div className="text-xs text-slate-400 mt-1">{prettyDateLong(n.created_at.slice(0, 10))}</div>
+              <p className="text-sm text-fg mt-1.5">{n.message}</p>
+              <div className="text-xs text-dim mt-1">{prettyDateLong(n.created_at.slice(0, 10))}</div>
               {n.link && (
                 <Link to={n.link} className="text-xs text-brand-600 font-medium hover:underline mt-1 inline-block">
-                  View →
+                  View â†’
                 </Link>
               )}
             </div>

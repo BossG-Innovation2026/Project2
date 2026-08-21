@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+﻿import { useEffect, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { usePolling } from "../hooks/usePolling";
 import { api, type Absence, type ReliefRow } from "../api";
@@ -102,7 +102,7 @@ export default function Dashboard() {
     setFileMsg(null);
     try {
       await api("/api/absences", { method: "POST", body: JSON.stringify(fileForm) });
-      setFileMsg("Leave request submitted — pending admin approval.");
+      setFileMsg("Leave request submitted â€” pending admin approval.");
       setFileForm({ date: todayISO(), period: 1, reason: "" });
       setRefreshKey((k) => k + 1);
     } catch (err) {
@@ -115,11 +115,11 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-slate-800">Dashboard</h1>
-        <p className="text-sm text-slate-500">Welcome back, {data.user.name}</p>
+        <h1 className="text-xl font-bold text-fg">Dashboard</h1>
+        <p className="text-sm text-muted">Welcome back, {data.user.name}</p>
       </div>
 
-      <div className="border-b border-slate-200 flex gap-6 overflow-x-auto">
+      <div className="border-b border-line flex gap-6 overflow-x-auto">
         {PANEL_TABS.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -127,8 +127,8 @@ export default function Dashboard() {
             onClick={() => switchTab(key)}
             className={`flex items-center gap-2 pb-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${
               tab === key
-                ? "border-brand-600 text-brand-700"
-                : "border-transparent text-slate-500 hover:text-slate-700"
+                ? "border-brand-600 text-brand-700 dark:border-brand-400 dark:text-brand-300"
+                : "border-transparent text-muted hover:text-fg"
             }`}
           >
             <Icon size={15} />
@@ -157,7 +157,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader
             title="Upcoming leaves"
-            subtitle={`${prettyDate(s.today)} — 7 days ahead`}
+            subtitle={`${prettyDate(s.today)} â€” 7 days ahead`}
             actions={
               isAdmin ? (
                 <Link to="/requests" className="text-xs text-brand-600 font-medium hover:underline flex items-center gap-1">
@@ -171,8 +171,8 @@ export default function Dashboard() {
             {data.upcoming_absences.map((a) => (
               <div key={a.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-slate-50 border-b border-slate-50 last:border-0">
                 <div>
-                  <div className="text-sm font-medium text-slate-700">{a.teacher_name}</div>
-                  <div className="text-xs text-slate-500">{prettyDate(a.date)} · Period {a.period}{a.reason ? ` · ${a.reason}` : ""}</div>
+                  <div className="text-sm font-medium text-fg">{a.teacher_name}</div>
+                  <div className="text-xs text-muted">{prettyDate(a.date)} Â· Period {a.period}{a.reason ? ` Â· ${a.reason}` : ""}</div>
                 </div>
                 <Badge className={a.assigned_count > 0 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}>
                   {a.assigned_count > 0 ? "Covered" : "Needs reliever"}
@@ -198,8 +198,8 @@ export default function Dashboard() {
               {data.my_assignments.map((r) => (
                 <div key={r.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-slate-50 border-b border-slate-50 last:border-0">
                   <div>
-                    <div className="text-sm font-medium text-slate-700">Cover for {r.absent_teacher_name}</div>
-                    <div className="text-xs text-slate-500">{prettyDate(r.date)} · Period {r.period} · {r.class_name || r.subject || "—"}</div>
+                    <div className="text-sm font-medium text-fg">Cover for {r.absent_teacher_name}</div>
+                    <div className="text-xs text-muted">{prettyDate(r.date)} Â· Period {r.period} Â· {r.class_name || r.subject || "â€”"}</div>
                   </div>
                   <Badge className={RELIEF_STATUS_STYLE[r.status]}>{r.status}</Badge>
                 </div>
@@ -220,8 +220,8 @@ export default function Dashboard() {
                 return (
                   <div key={r.id} className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg hover:bg-slate-50 border-b border-slate-50 last:border-0">
                     <div className="min-w-0">
-                      <div className="text-sm font-medium text-slate-700">Cover for {r.absent_teacher_name}</div>
-                      <div className="text-xs text-slate-500">{prettyDate(r.date)} · Period {r.period} · {r.class_name || r.subject || "—"}</div>
+                      <div className="text-sm font-medium text-fg">Cover for {r.absent_teacher_name}</div>
+                      <div className="text-xs text-muted">{prettyDate(r.date)} Â· Period {r.period} Â· {r.class_name || r.subject || "â€”"}</div>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <Badge className={RELIEF_STATUS_STYLE[r.status]}>{r.status}</Badge>
@@ -250,27 +250,27 @@ export default function Dashboard() {
             <CardHeader
               title="File a leave"
               subtitle="Submitted requests go to the admin for approval"
-              actions={<ClipboardList className="text-slate-300" size={20} />}
+              actions={<ClipboardList className="text-dim" size={20} />}
             />
             <form onSubmit={submitAbsence} className="p-4 space-y-3">
               <Flash error={fileError} />
               {fileMsg && <div className="rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-3">{fileMsg}</div>}
               <div className="grid sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
+                  <label className="block text-sm font-medium text-fg mb-1">Date</label>
                   <Input type="date" value={fileForm.date} onChange={(e) => setFileForm((f) => ({ ...f, date: e.target.value }))} required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Period</label>
+                  <label className="block text-sm font-medium text-fg mb-1">Period</label>
                   <Input type="number" min={1} max={24} value={fileForm.period} onChange={(e) => setFileForm((f) => ({ ...f, period: Number(e.target.value) }))} required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Reason (optional)</label>
+                  <label className="block text-sm font-medium text-fg mb-1">Reason (optional)</label>
                   <Input value={fileForm.reason} onChange={(e) => setFileForm((f) => ({ ...f, reason: e.target.value }))} placeholder="e.g. Sick leave, seminar" />
                 </div>
               </div>
               <div className="flex justify-end">
-                <Button type="submit" disabled={fileBusy}>{fileBusy ? "Submitting…" : "Submit request"}</Button>
+                <Button type="submit" disabled={fileBusy}>{fileBusy ? "Submittingâ€¦" : "Submit request"}</Button>
               </div>
             </form>
           </Card>
@@ -280,31 +280,31 @@ export default function Dashboard() {
       <Card>
         <CardHeader
           title="Quick actions"
-          actions={<CalendarDays className="text-slate-300" size={20} />}
+          actions={<CalendarDays className="text-dim" size={20} />}
         />
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4">
-          <button type="button" onClick={() => switchTab("calendar")} className="text-left rounded-xl border border-slate-200 p-4 hover:border-brand-400 hover:shadow-sm transition-colors">
-            <div className="font-medium text-sm text-slate-700">View calendar</div>
-            <div className="text-xs text-slate-400 mt-1">Weekly coverage & assignments</div>
+          <button type="button" onClick={() => switchTab("calendar")} className="text-left rounded-xl border border-line p-4 hover:border-brand-400 hover:shadow-sm transition-colors">
+            <div className="font-medium text-sm text-fg">View calendar</div>
+            <div className="text-xs text-dim mt-1">Weekly coverage & assignments</div>
           </button>
           {isAdmin ? (
-            <Link to="/requests" className="rounded-xl border border-slate-200 p-4 hover:border-brand-400 hover:shadow-sm transition-colors">
-              <div className="font-medium text-sm text-slate-700">File a leave</div>
-              <div className="text-xs text-slate-400 mt-1">Log a leave request</div>
+            <Link to="/requests" className="rounded-xl border border-line p-4 hover:border-brand-400 hover:shadow-sm transition-colors">
+              <div className="font-medium text-sm text-fg">File a leave</div>
+              <div className="text-xs text-dim mt-1">Log a leave request</div>
             </Link>
           ) : (
-            <a href="#file-absence" className="rounded-xl border border-slate-200 p-4 hover:border-brand-400 hover:shadow-sm transition-colors">
-              <div className="font-medium text-sm text-slate-700">File a leave</div>
-              <div className="text-xs text-slate-400 mt-1">Log a leave request</div>
+            <a href="#file-absence" className="rounded-xl border border-line p-4 hover:border-brand-400 hover:shadow-sm transition-colors">
+              <div className="font-medium text-sm text-fg">File a leave</div>
+              <div className="text-xs text-dim mt-1">Log a leave request</div>
             </a>
           )}
-          <Link to="/availability" className="rounded-xl border border-slate-200 p-4 hover:border-brand-400 hover:shadow-sm transition-colors">
-            <div className="font-medium text-sm text-slate-700">Set availability</div>
-            <div className="text-xs text-slate-400 mt-1">Mark periods available/unavailable</div>
+          <Link to="/availability" className="rounded-xl border border-line p-4 hover:border-brand-400 hover:shadow-sm transition-colors">
+            <div className="font-medium text-sm text-fg">Set availability</div>
+            <div className="text-xs text-dim mt-1">Mark periods available/unavailable</div>
           </Link>
-          <button type="button" onClick={() => switchTab("reports")} className="text-left rounded-xl border border-slate-200 p-4 hover:border-brand-400 hover:shadow-sm transition-colors">
-            <div className="font-medium text-sm text-slate-700">Reports</div>
-            <div className="text-xs text-slate-400 mt-1">Workload, coverage & analytics</div>
+          <button type="button" onClick={() => switchTab("reports")} className="text-left rounded-xl border border-line p-4 hover:border-brand-400 hover:shadow-sm transition-colors">
+            <div className="font-medium text-sm text-fg">Reports</div>
+            <div className="text-xs text-dim mt-1">Workload, coverage & analytics</div>
           </button>
         </div>
       </Card>

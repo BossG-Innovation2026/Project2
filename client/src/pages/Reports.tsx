@@ -1,14 +1,24 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { api, type WorkloadRow } from "../api";
 import { usePolling } from "../hooks/usePolling";
 import { Card, CardHeader, Stat, Spinner, Button, Select, EmptyState, Flash } from "../components/ui";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend } from "recharts";
 import { startOfWeekISO, endOfWeekISO, todayISO, addDaysISO, prettyDate } from "../lib/format";
+import { useTheme } from "../lib/theme";
 import { Download } from "lucide-react";
 
 const PIE_COLORS = ["#3b63f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
 
 export default function Reports() {
+  const { theme } = useTheme();
+  const gridStroke = theme === "dark" ? "#334155" : "#e2e8f0";
+  const tooltipStyle = {
+    backgroundColor: "rgb(var(--surface))",
+    border: "1px solid rgb(var(--line))",
+    borderRadius: "8px",
+    color: "rgb(var(--fg))",
+    fontSize: "12px",
+  };
   const [weekDate, setWeekDate] = useState(todayISO());
   const weekStart = startOfWeekISO(weekDate);
   const weekEnd = endOfWeekISO(weekDate);
@@ -46,12 +56,12 @@ export default function Reports() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">Reports & Analytics</h1>
-          <p className="text-sm text-slate-500">Week of {prettyDate(weekStart)} — {prettyDate(weekEnd)}</p>
+          <h1 className="text-xl font-bold text-fg">Reports & Analytics</h1>
+          <p className="text-sm text-muted">Week of {prettyDate(weekStart)} â€” {prettyDate(weekEnd)}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={() => setWeekDate(addDaysISO(weekDate, -7))}>‹ Prev</Button>
-          <Button variant="secondary" size="sm" onClick={() => setWeekDate(addDaysISO(weekDate, 7))}>Next ›</Button>
+          <Button variant="secondary" size="sm" onClick={() => setWeekDate(addDaysISO(weekDate, -7))}>â€¹ Prev</Button>
+          <Button variant="secondary" size="sm" onClick={() => setWeekDate(addDaysISO(weekDate, 7))}>Next â€º</Button>
           <Select value={weekDate} onChange={(e) => setWeekDate(e.target.value)} className="w-44">
             {Array.from({ length: 12 }, (_, i) => addDaysISO(todayISO(), (i - 6) * 7)).map((d) => (
               <option key={d} value={d}>{prettyDate(startOfWeekISO(d))}</option>
@@ -67,13 +77,13 @@ export default function Reports() {
         </div>
       </div>
 
-      {errors.length > 0 && <Flash error={errors.join(" · ")} />}
+      {errors.length > 0 && <Flash error={errors.join(" Â· ")} />}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Stat label="Leaves (week)" value={coverage ? coverage.total_absences : "—"} />
-        <Stat label="Assignments (week)" value={coverage ? coverage.total_assigned : "—"} />
-        <Stat label="Coverage rate" value={coverage ? `${coverage.coverage_rate}%` : "—"} />
-        <Stat label="Teachers" value={workload ? workload.workload.length : "—"} />
+        <Stat label="Leaves (week)" value={coverage ? coverage.total_absences : "â€”"} />
+        <Stat label="Assignments (week)" value={coverage ? coverage.total_assigned : "â€”"} />
+        <Stat label="Coverage rate" value={coverage ? `${coverage.coverage_rate}%` : "â€”"} />
+        <Stat label="Teachers" value={workload ? workload.workload.length : "â€”"} />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
@@ -85,10 +95,10 @@ export default function Reports() {
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={coverage.days}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
                   <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(d: string) => d.slice(5)} />
                   <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                  <Tooltip labelFormatter={(l: string) => prettyDate(l)} />
+                  <Tooltip labelFormatter={(l: string) => prettyDate(l)} contentStyle={tooltipStyle} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                   <Bar dataKey="absences" name="Leaves" fill="#f59e0b" radius={[3, 3, 0, 0]} />
                   <Bar dataKey="assigned" name="Assigned" fill="#10b981" radius={[3, 3, 0, 0]} />
@@ -106,10 +116,10 @@ export default function Reports() {
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={workloadData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
                   <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
                   <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(v, n) => [`${v} periods`, n === "max" ? "Max load" : "Current load"]} />
+                  <Tooltip formatter={(v, n) => [`${v} periods`, n === "max" ? "Max load" : "Current load"]} contentStyle={tooltipStyle} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                   <Bar dataKey="load" name="Current load" fill="#3b63f6" radius={[0, 3, 3, 0]} />
                   <Bar dataKey="max" name="Max load" fill="#cbd5e1" radius={[0, 3, 3, 0]} />
@@ -124,7 +134,7 @@ export default function Reports() {
           <div className="p-4 h-64">
             {reasonsError ? (
               <div className="h-full flex items-center justify-center text-sm text-rose-600">
-                Failed to load — retrying automatically…
+                Failed to load â€” retrying automaticallyâ€¦
               </div>
             ) : !reasons ? (
               <div className="h-full flex items-center justify-center">
@@ -138,7 +148,7 @@ export default function Reports() {
                       <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip contentStyle={tooltipStyle} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                 </PieChart>
               </ResponsiveContainer>
@@ -155,8 +165,8 @@ export default function Reports() {
               <SectionState loading={!workloadError} error={workloadError} />
             ) : (
               <table className="w-full text-sm">
-                <thead className="bg-slate-50 sticky top-0">
-                  <tr className="text-left text-xs font-semibold text-slate-500">
+                <thead className="bg-subtle sticky top-0">
+                  <tr className="text-left text-xs font-semibold text-muted">
                     <th className="px-4 py-2">Teacher</th>
                     <th className="px-4 py-2">Dept</th>
                     <th className="px-4 py-2 text-center">Sched</th>
@@ -168,9 +178,9 @@ export default function Reports() {
                 </thead>
                 <tbody>
                   {workload.workload.map((w) => (
-                    <tr key={w.teacher_id} className="border-t border-slate-100">
-                      <td className="px-4 py-2 font-medium text-slate-700">{w.name}</td>
-                      <td className="px-4 py-2 text-slate-500">{w.department || "—"}</td>
+                    <tr key={w.teacher_id} className="border-t border-line">
+                      <td className="px-4 py-2 font-medium text-fg">{w.name}</td>
+                      <td className="px-4 py-2 text-muted">{w.department || "â€”"}</td>
                       <td className="px-4 py-2 text-center">{w.scheduled_periods}</td>
                       <td className="px-4 py-2 text-center">{w.relief_this_week}</td>
                       <td className="px-4 py-2 text-center font-medium">{w.total_current}</td>
@@ -204,7 +214,7 @@ function SectionState({ loading, error }: { loading: boolean; error: string | nu
   if (error)
     return (
       <div className="h-full min-h-[8rem] flex items-center justify-center text-sm text-rose-600">
-        Failed to load — retrying automatically…
+        Failed to load â€” retrying automaticallyâ€¦
       </div>
     );
   return null;

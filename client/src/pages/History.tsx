@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { api, type ReliefRow, type Teacher } from "../api";
 import { usePolling } from "../hooks/usePolling";
 import { Card, CardHeader, Badge, Select, Spinner, EmptyState, Flash, Button } from "../components/ui";
@@ -32,8 +32,8 @@ export default function History() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">Reliever Assignment History</h1>
-          <p className="text-sm text-slate-500">Last 90 days · every assignment, response and override</p>
+          <h1 className="text-xl font-bold text-fg">Reliever Assignment History</h1>
+          <p className="text-sm text-muted">Last 90 days Â· every assignment, response and override</p>
         </div>
         <div className="flex items-center gap-2">
           <Select value={teacherFilter} onChange={(e) => setTeacherFilter(Number(e.target.value))} className="w-48">
@@ -59,7 +59,7 @@ export default function History() {
       <Card className="overflow-x-auto">
         <table className="w-full text-sm min-w-[800px]">
           <thead>
-            <tr className="bg-slate-50 text-left text-xs font-semibold text-slate-500">
+            <tr className="bg-subtle text-left text-xs font-semibold text-muted">
               <th className="px-4 py-2.5">Date</th>
               <th className="px-4 py-2.5">Reliever</th>
               <th className="px-4 py-2.5">Teacher on leave</th>
@@ -71,14 +71,14 @@ export default function History() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50/60">
-                <td className="px-4 py-2.5 whitespace-nowrap text-slate-600">{prettyDate(r.date)}</td>
-                <td className="px-4 py-2.5 font-medium text-slate-700">{r.reliever_name}</td>
-                <td className="px-4 py-2.5 text-slate-600">{r.absent_teacher_name}</td>
-                <td className="px-4 py-2.5 text-slate-600">{r.period}</td>
-                <td className="px-4 py-2.5 text-slate-600">{r.class_name || r.subject || "—"}</td>
+              <tr key={r.id} className="border-t border-line hover:bg-slate-50/60">
+                <td className="px-4 py-2.5 whitespace-nowrap text-muted">{prettyDate(r.date)}</td>
+                <td className="px-4 py-2.5 font-medium text-fg">{r.reliever_name}</td>
+                <td className="px-4 py-2.5 text-muted">{r.absent_teacher_name}</td>
+                <td className="px-4 py-2.5 text-muted">{r.period}</td>
+                <td className="px-4 py-2.5 text-muted">{r.class_name || r.subject || "â€”"}</td>
                 <td className="px-4 py-2.5"><Badge className={RELIEF_STATUS_STYLE[r.status]}>{r.status}</Badge></td>
-                <td className="px-4 py-2.5 text-slate-600">{r.is_override === 1 ? "Yes" : "—"}</td>
+                <td className="px-4 py-2.5 text-muted">{r.is_override === 1 ? "Yes" : "â€”"}</td>
               </tr>
             ))}
           </tbody>
