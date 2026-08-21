@@ -1,0 +1,24 @@
+name = "cshs-trace"
+account_id = "3ae62bfebe9b8d70c441e29f60b3fca4"
+main = "src/index.ts"
+compatibility_date = "2024-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+workers_dev = true
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "trace"
+database_id = "1bc116fb-ea53-4403-a76f-8846c3a6b93e"
+migrations_dir = "migrations"
+
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "a4e62d4a5eb14f2eb2ba0ea80ece31e7"
+
+[triggers]
+crons = ["0 20 * * *"]
