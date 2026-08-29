@@ -51,6 +51,13 @@ function TeacherReports() {
     if (!pdfRef.current || !summary || !user) return;
     setGeneratingPdf(true);
     try {
+      const el = pdfRef.current;
+      el.style.position = "absolute";
+      el.style.left = "0";
+      el.style.top = "0";
+      el.style.zIndex = "9999";
+      el.style.background = "#fff";
+      await new Promise((r) => setTimeout(r, 100));
       const html2pdf = (await import("html2pdf.js")).default;
       await html2pdf()
         .set({
@@ -61,8 +68,12 @@ function TeacherReports() {
           jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
           pagebreak: { mode: ["avoid-all", "css", "legacy"] },
         })
-        .from(pdfRef.current)
+        .from(el)
         .save();
+      el.style.position = "fixed";
+      el.style.left = "-9999px";
+      el.style.top = "0";
+      el.style.zIndex = "-1";
     } catch (e) {
       console.error("PDF generation failed", e);
     } finally {
@@ -292,7 +303,7 @@ function TeacherReports() {
         </Card>
       </div>
 
-      <div ref={pdfRef} className="hidden">
+      <div ref={pdfRef} style={{ position: "fixed", left: "-9999px", top: 0, zIndex: -1, width: "800px", background: "#fff" }}>
         <div style={{ fontFamily: "Arial, sans-serif", color: "#1e293b", padding: "20px", maxWidth: "800px" }}>
           <div style={{ textAlign: "center", borderBottom: "3px solid #3b63f6", paddingBottom: "16px", marginBottom: "20px" }}>
             <h1 style={{ fontSize: "22px", fontWeight: "bold", margin: 0, color: "#1e293b" }}>CSHS TRACE</h1>
