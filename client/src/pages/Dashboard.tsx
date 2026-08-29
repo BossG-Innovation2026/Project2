@@ -45,7 +45,7 @@ export default function Dashboard() {
 
   const s = data.summary;
   const isAdmin = user?.role === "admin";
-  const pendingAssignments = data.my_assignments.filter((r) => ["assigned", "recommended", "overridden"].includes(r.status) && r.reliever_id === user?.id);
+  const pendingAssignments = data.my_assignments.filter((r) => ["assigned", "recommended", "overridden"].includes(r.status));
   const acceptedAssignments = data.my_assignments.filter((r) => r.status === "accepted");
 
   async function respond(id: number, status: "accepted" | "declined") {

@@ -9,7 +9,7 @@ export const reliefRoutes = new Hono<AppContext>();
 
 reliefRoutes.use("*", requireAuth);
 
-reliefRoutes.get("/", requireAdmin, async (c) => {
+reliefRoutes.get("/", requireAuth, async (c) => {
   const absenceId = c.req.query("absence_id");
   const mine = c.req.query("mine");
   const status = c.req.query("status");
