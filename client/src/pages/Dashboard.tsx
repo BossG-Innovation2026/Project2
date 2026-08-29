@@ -11,7 +11,7 @@ import NotificationsPage from "./Notifications";
 import Reports from "./Reports";
 import FileLeave from "./FileLeave";
 import { ErrorBoundary } from "../components/ErrorBoundary";
-import { ClipboardList, LifeBuoy, CheckCircle2, XCircle, LayoutDashboard, BarChart3, FileDown, X } from "lucide-react";
+import { ClipboardList, LifeBuoy, CheckCircle2, XCircle, LayoutDashboard, BarChart3, FileDown } from "lucide-react";
 
 interface DashboardData {
   user: { id: number; name: string; role: string };
@@ -58,10 +58,6 @@ export default function Dashboard() {
     if (panel) setPanelTab(panel);
   }, [panel]);
 
-  function closePanel() {
-    setSearchParams({}, { replace: true });
-  }
-
   function switchPanelTab(tab: string) {
     setPanelTab(tab);
     setSearchParams({ panel: tab }, { replace: true });
@@ -85,32 +81,51 @@ export default function Dashboard() {
   }
 
   return (
-    <>
-      <div className="space-y-6">
-        {!isAdmin && pendingAssignments.length > 0 && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
-            <LifeBuoy size={20} className="text-amber-600 mt-0.5 shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-amber-800">Relief assignment offer pending</p>
-              <p className="text-sm text-amber-700">You have {pendingAssignments.length} pending relief {pendingAssignments.length === 1 ? "assignment" : "assignments"} waiting for your response.</p>
-            </div>
+    <div className="space-y-6">
+      {!isAdmin && pendingAssignments.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+          <LifeBuoy size={20} className="text-amber-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800">Relief assignment offer pending</p>
+            <p className="text-sm text-amber-700">You have {pendingAssignments.length} pending relief {pendingAssignments.length === 1 ? "assignment" : "assignments"} waiting for your response.</p>
           </div>
-        )}
-        {!isAdmin && data.my_absences.some((a) => a.status === "approved") && (
-          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 flex items-start gap-3">
-            <CheckCircle2 size={20} className="text-emerald-600 mt-0.5 shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-emerald-800">Leave request approved</p>
-              <p className="text-sm text-emerald-700">Your leave {data.my_absences.filter((a) => a.status === "approved").length === 1 ? "request has" : "requests have"} been approved.</p>
-            </div>
-          </div>
-        )}
-
-        <div>
-          <h1 className="text-xl font-bold text-fg">Dashboard</h1>
-          <p className="text-sm text-muted">Welcome back, {data.user.name}</p>
         </div>
+      )}
+      {!isAdmin && data.my_absences.some((a) => a.status === "approved") && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 flex items-start gap-3">
+          <CheckCircle2 size={20} className="text-emerald-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-emerald-800">Leave request approved</p>
+            <p className="text-sm text-emerald-700">Your leave {data.my_absences.filter((a) => a.status === "approved").length === 1 ? "request has" : "requests have"} been approved.</p>
+          </div>
+        </div>
+      )}
 
+      <div>
+        <h1 className="text-xl font-bold text-fg">Dashboard</h1>
+        <p className="text-sm text-muted">Welcome back, {data.user.name}</p>
+      </div>
+
+      <div className="border-b border-line flex gap-4 mb-6">
+        {PANEL_TABS.map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => switchPanelTab(key)}
+            className={`flex items-center gap-2 pb-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              panelTab === key
+                ? "border-brand-600 text-brand-700 dark:border-brand-400 dark:text-brand-300"
+                : "border-transparent text-muted hover:text-fg"
+            }`}
+          >
+            <Icon size={15} />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {panelTab === "dashboard" && (
+        <>
         {isAdmin ? (
           <>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -241,111 +256,24 @@ export default function Dashboard() {
             </div>
           </Card>
         </div>
+
+          <ErrorBoundary label="Calendar"><Calendar /></ErrorBoundary>
+          <ErrorBoundary label="Reliever History"><HistoryPage /></ErrorBoundary>
+          <ErrorBoundary label="Notifications"><NotificationsPage /></ErrorBoundary>
           </>
         )}
-
-        {!isAdmin && (
-          <>
-            <ErrorBoundary label="Calendar"><Calendar /></ErrorBoundary>
-            <ErrorBoundary label="Reliever History"><HistoryPage /></ErrorBoundary>
-            <ErrorBoundary label="Notifications"><NotificationsPage /></ErrorBoundary>
-          </>
-        )}
-      </div>
-
-      {panel && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/40" onClick={closePanel} />
-          <div className="relative w-full max-w-5xl bg-canvas border-l border-line overflow-y-auto shadow-2xl animate-slide-in-right">
-            <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-3 bg-canvas border-b border-line">
-              <div className="flex gap-1">
-                {PANEL_TABS.map(({ key, label, icon: Icon }) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => switchPanelTab(key)}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                      panelTab === key
-                        ? "bg-brand-600 text-white"
-                        : "text-muted hover:text-fg hover:bg-hov"
-                    }`}
-                  >
-                    <Icon size={15} />
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={closePanel}
-                className="p-1.5 rounded-lg text-muted hover:text-fg hover:bg-hov transition-colors"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div className="p-5">
-              {panelTab === "dashboard" && (
-                <div className="space-y-6">
-                  <div>
-                    <h1 className="text-xl font-bold text-fg">Dashboard</h1>
-                    <p className="text-sm text-muted">Welcome back, {data.user.name}</p>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <Stat label="Teachers" value={s.teachers} />
-                    <Stat label="Pending leaves" value={s.pending_absences} />
-                    <Stat label="Leaves this week" value={s.absences_this_week} />
-                    <Stat label="Relief this week" value={s.assignments_this_week} sub={`${s.assignments_total} all-time`} />
-                  </div>
-                  <div className="grid lg:grid-cols-2 gap-6">
-                    <Card>
-                      <CardHeader title="Upcoming leaves" subtitle={`${prettyDate(s.today)} — 7 days ahead`} />
-                      <div className="p-3">
-                        {data.upcoming_absences.length === 0 && <EmptyState message="No upcoming leaves" />}
-                        {data.upcoming_absences.map((a) => (
-                          <div key={a.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-slate-50 border-b border-slate-50 last:border-0">
-                            <div>
-                              <div className="text-sm font-medium text-fg">{a.teacher_name}</div>
-                              <div className="text-xs text-muted">{prettyDate(a.date)} · Period {a.period}{a.reason ? ` · ${a.reason}` : ""}</div>
-                            </div>
-                            <Badge className={a.assigned_count > 0 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}>
-                              {a.assigned_count > 0 ? "Covered" : "Needs reliever"}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </Card>
-                    <Card>
-                      <CardHeader title="My relief assignments" subtitle="Your accepted & pending assignments" />
-                      <div className="p-3">
-                        {data.my_assignments.length === 0 && <EmptyState message="No relief assignments yet" />}
-                        {data.my_assignments.map((r) => (
-                          <div key={r.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-slate-50 border-b border-slate-50 last:border-0">
-                            <div>
-                              <div className="text-sm font-medium text-fg">Cover for {r.absent_teacher_name}</div>
-                              <div className="text-xs text-muted">{prettyDate(r.date)} · Period {r.period} · {r.class_name || r.subject || "—"}</div>
-                            </div>
-                            <Badge className={RELIEF_STATUS_STYLE[r.status]}>{r.status}</Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </Card>
-                  </div>
-                </div>
-              )}
-              {panelTab === "reports" && (
-                <ErrorBoundary label="Reports">
-                  <Reports />
-                </ErrorBoundary>
-              )}
-              {panelTab === "leave" && (
-                <ErrorBoundary label="File a leave">
-                  <FileLeave />
-                </ErrorBoundary>
-              )}
-            </div>
-          </div>
-        </div>
+        </>
       )}
-    </>
+      {panelTab === "reports" && (
+        <ErrorBoundary label="Reports">
+          <Reports />
+        </ErrorBoundary>
+      )}
+      {panelTab === "leave" && (
+        <ErrorBoundary label="File a leave">
+          <FileLeave />
+        </ErrorBoundary>
+      )}
+    </div>
   );
 }
