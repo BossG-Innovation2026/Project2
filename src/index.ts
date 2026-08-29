@@ -94,6 +94,8 @@ app.get("/api/dashboard", requireAuth, async (c) => {
     summary,
     relief_hours: reliefHoursRow?.cnt ?? 0,
     leave_hours: leaveHoursRow?.cnt ?? 0,
+    period_count: (await getPeriodNames(c.env.DB)).length,
+    period_names: await getPeriodNames(c.env.DB),
   });
 });
 

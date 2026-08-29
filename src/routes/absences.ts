@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { AppContext, AppEnv, SessionUser, Variables } from "../types";
-import { requireAuth, requireAdmin, notifyUser } from "../lib/auth";
+import { requireAuth, requireAdmin, notifyUser, getPeriodCount } from "../lib/auth";
 import { isValidDate, nowISO } from "../lib/dates";
 import { findCandidates } from "../services/matching";
 
@@ -68,61 +68,99 @@ absencesRoutes.get("/:id", async (c) => {
 /**
  * Create an absence request. Teachers can only create for themselves;
  * admins can create for any teacher and can skip the approval step (status approved).
+ * Accepts either `period` (single) or `periods` (array of period numbers).
  */
 absencesRoutes.post("/", async (c) => {
   const body = await c.req.json<{
     teacher_id?: number;
     date: string;
-    period: number;
+    period?: number;
+    periods?: number[];
     reason?: string;
     status?: "pending" | "approved";
   }>();
-  if (!isValidDate(body.date) || body.period < 1) {
-    return c.json({ error: "Invalid date or period" }, 400);
+  if (!isValidDate(body.date)) {
+    return c.json({ error: "Invalid date" }, 400);
   }
+
   const teacherId = body.teacher_id ?? c.get("user").id;
   if (c.get("user").role !== "admin" && teacherId !== c.get("user").id) {
     return c.json({ error: "Forbidden" }, 403);
   }
+
+  const pc = await getPeriodCount(c.env.DB);
+
+  // Normalize to a periods array
+  let periods: number[];
+  if (body.periods && Array.isArray(body.periods) && body.periods.length > 0) {
+    periods = body.periods.filter((p) => p >= 1 && p <= pc);
+    if (periods.length === 0) return c.json({ error: "No valid periods provided" }, 400);
+  } else if (body.period != null && body.period >= 1 && body.period <= pc) {
+    periods = [body.period];
+  } else {
+    return c.json({ error: "Invalid period(s)" }, 400);
+  }
+
   const wantStatus = c.get("user").role === "admin" ? body.status ?? "approved" : "pending";
 
-  const dup = await c.env.DB.prepare(
-    `SELECT id FROM absences WHERE teacher_id = ? AND date = ? AND period = ?
-     AND status != 'declined'`
-  )
-    .bind(teacherId, body.date, body.period)
-    .first();
-  if (dup) return c.json({ error: "A leave for this teacher/date/period already exists" }, 409);
+  // Check for duplicates across all requested periods
+  const createdIds: number[] = [];
+  const skippedPeriods: number[] = [];
+  const duplicates: number[] = [];
 
-  const result = await c.env.DB.prepare(
-    `INSERT INTO absences (teacher_id, date, period, reason, status, requested_by, reviewed_by, reviewed_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  )
-    .bind(
-      teacherId,
-      body.date,
-      body.period,
-      body.reason ?? "",
-      wantStatus,
-      c.get("user").id,
-      wantStatus === "approved" ? c.get("user").id : null,
-      wantStatus === "approved" ? nowISO() : null
+  for (const period of periods) {
+    const dup = await c.env.DB.prepare(
+      `SELECT id FROM absences WHERE teacher_id = ? AND date = ? AND period = ?
+       AND status != 'declined'`
     )
-    .run();
-  const absenceId = Number(result.meta.last_row_id);
+      .bind(teacherId, body.date, period)
+      .first();
+    if (dup) {
+      duplicates.push(period);
+      continue;
+    }
+
+    const result = await c.env.DB.prepare(
+      `INSERT INTO absences (teacher_id, date, period, reason, status, requested_by, reviewed_by, reviewed_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+      .bind(
+        teacherId,
+        body.date,
+        period,
+        body.reason ?? "",
+        wantStatus,
+        c.get("user").id,
+        wantStatus === "approved" ? c.get("user").id : null,
+        wantStatus === "approved" ? nowISO() : null
+      )
+      .run();
+    createdIds.push(Number(result.meta.last_row_id));
+  }
+
+  if (createdIds.length === 0 && duplicates.length > 0) {
+    return c.json({ error: `Leaves already exist for periods: ${duplicates.join(", ")}` }, 409);
+  }
 
   const teacher = await c.env.DB.prepare("SELECT name FROM users WHERE id = ?")
     .bind(teacherId)
     .first<{ name: string }>();
 
+  const periodLabel = periods.length === 1
+    ? `Period ${periods[0]}`
+    : `Periods ${periods.join(", ")}`;
+
   if (wantStatus === "approved") {
+    // Notify teacher and recommend relievers for each absence
     await notifyUser(
       c.env.DB,
       teacherId,
       "absence_approved",
-      `Your leave on ${body.date} (Period ${body.period}) was approved.`
+      `Your leave on ${body.date} (${periodLabel}) was approved.`
     );
-    await recommendForAbsence(c, absenceId);
+    for (const absenceId of createdIds) {
+      await recommendForAbsence(c, absenceId);
+    }
   } else {
     const admins = await c.env.DB.prepare("SELECT id FROM users WHERE role = 'admin'").all<{ id: number }>();
     for (const a of admins.results) {
@@ -130,12 +168,13 @@ absencesRoutes.post("/", async (c) => {
         c.env.DB,
         a.id,
         "absence_request",
-        `${teacher?.name ?? "A teacher"} requested leave on ${body.date} (Period ${body.period}).`,
+        `${teacher?.name ?? "A teacher"} requested leave on ${body.date} (${periodLabel}).`,
         "/requests"
       );
     }
   }
-  return c.json({ id: absenceId }, 201);
+
+  return c.json({ ids: createdIds, duplicates }, 201);
 });
 
 /**

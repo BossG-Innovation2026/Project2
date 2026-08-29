@@ -29,6 +29,8 @@ interface DashboardData {
   upcoming_absences: (Absence & { assigned_count: number })[];
   relief_hours: number;
   leave_hours: number;
+  period_count: number;
+  period_names: string[];
   summary: {
     teachers: number;
     pending_absences: number;
@@ -46,7 +48,8 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
   const [respondError, setRespondError] = useState<string | null>(null);
-  const [fileForm, setFileForm] = useState({ date: todayISO(), period: 1, reason: "" });
+  const [fileForm, setFileForm] = useState({ date: todayISO(), reason: "" });
+  const [selectedPeriods, setSelectedPeriods] = useState<number[]>([1]);
   const [fileBusy, setFileBusy] = useState(false);
   const [fileMsg, setFileMsg] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -113,13 +116,22 @@ export default function Dashboard() {
 
   async function submitAbsence(e: FormEvent) {
     e.preventDefault();
+    if (selectedPeriods.length === 0) return;
     setFileBusy(true);
     setFileError(null);
     setFileMsg(null);
     try {
-      await api("/api/absences", { method: "POST", body: JSON.stringify(fileForm) });
-      setFileMsg("Leave request submitted — pending admin approval.");
-      setFileForm({ date: todayISO(), period: 1, reason: "" });
+      const res = await api<{ ids: number[]; duplicates: number[] }>("/api/absences", {
+        method: "POST",
+        body: JSON.stringify({ ...fileForm, periods: selectedPeriods }),
+      });
+      const count = res.ids.length;
+      const dupCount = res.duplicates.length;
+      let msg = `${count} leave request${count !== 1 ? "s" : ""} submitted — pending admin approval.`;
+      if (dupCount > 0) msg += ` (${dupCount} period${dupCount !== 1 ? "s" : ""} already filed)`;
+      setFileMsg(msg);
+      setFileForm({ date: todayISO(), reason: "" });
+      setSelectedPeriods([1]);
       setRefreshKey((k) => k + 1);
     } catch (err) {
       setFileError(err instanceof Error ? err.message : "Submit failed");
@@ -316,23 +328,73 @@ export default function Dashboard() {
                 <form onSubmit={submitAbsence} className="p-4 space-y-3">
                   <Flash error={fileError} />
                   {fileMsg && <div className="rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-3">{fileMsg}</div>}
-                  <div className="grid sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-fg mb-1">Date</label>
-                      <Input type="date" value={fileForm.date} onChange={(e) => setFileForm((f) => ({ ...f, date: e.target.value }))} required />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-fg mb-1">Period</label>
-                      <Input type="number" min={1} max={24} value={fileForm.period} onChange={(e) => setFileForm((f) => ({ ...f, period: Number(e.target.value) }))} required />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-fg mb-1">Reason (optional)</label>
-                      <Input value={fileForm.reason} onChange={(e) => setFileForm((f) => ({ ...f, reason: e.target.value }))} placeholder="e.g. Sick leave, seminar" />
-                    </div>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-fg mb-1">Date</label>
+                  <Input type="date" value={fileForm.date} onChange={(e) => setFileForm((f) => ({ ...f, date: e.target.value }))} required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-fg mb-1">Reason (optional)</label>
+                  <Input value={fileForm.reason} onChange={(e) => setFileForm((f) => ({ ...f, reason: e.target.value }))} placeholder="e.g. Sick leave, seminar" />
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-fg">Period(s)</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const all = Array.from({ length: data.period_count }, (_, i) => i + 1);
+                      setSelectedPeriods((prev) => prev.length === all.length ? [] : all);
+                    }}
+                    className={`text-xs font-medium px-2.5 py-1 rounded-md transition-colors ${
+                      selectedPeriods.length === data.period_count
+                        ? "bg-brand-600 text-white"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    {selectedPeriods.length === data.period_count ? "Clear All" : "Whole Day"}
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {Array.from({ length: data.period_count }, (_, i) => {
+                    const period = i + 1;
+                    const isSelected = selectedPeriods.includes(period);
+                    const label = data.period_names[i] ? `P${period}` : `P${period}`;
+                    const subtitle = data.period_names[i] ?? "";
+                    return (
+                      <button
+                        key={period}
+                        type="button"
+                        onClick={() => {
+                          setSelectedPeriods((prev) =>
+                            prev.includes(period) ? prev.filter((p) => p !== period) : [...prev, period]
+                          );
+                        }}
+                        title={subtitle}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                          isSelected
+                            ? "bg-brand-600 text-white border-brand-600 shadow-sm"
+                            : "bg-white text-slate-600 border-slate-200 hover:border-brand-300 hover:bg-brand-50"
+                        }`}
+                      >
+                        P{period}
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedPeriods.length > 0 && (
+                  <div className="text-xs text-muted mt-1.5">
+                    {selectedPeriods.length} period{selectedPeriods.length !== 1 ? "s" : ""} selected
+                    {selectedPeriods.length < data.period_count && (
+                      <span> — {data.period_count - selectedPeriods.length} remaining</span>
+                    )}
                   </div>
-                  <div className="flex justify-end">
-                    <Button type="submit" disabled={fileBusy}>{fileBusy ? "Submitting..." : "Submit request"}</Button>
-                  </div>
+                )}
+              </div>
+              <div className="flex justify-end">
+                <Button type="submit" disabled={fileBusy || selectedPeriods.length === 0}>{fileBusy ? "Submitting..." : `Submit${selectedPeriods.length > 1 ? ` (${selectedPeriods.length})` : ""}`}</Button>
+              </div>
                 </form>
               </Card>
             </ErrorBoundary>
