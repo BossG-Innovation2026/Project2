@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+﻿import { useMemo, useState, useRef, useCallback } from "react";
 import { api, type WorkloadRow, type MySummary, type MonthlyLeaves, type ReliefBySubject, type MyWorkload } from "../api";
 import { usePolling } from "../hooks/usePolling";
 import { Card, CardHeader, Stat, Spinner, Button, Select, EmptyState, Flash } from "../components/ui";
@@ -6,7 +6,8 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { startOfWeekISO, endOfWeekISO, todayISO, addDaysISO, prettyDate } from "../lib/format";
 import { useTheme } from "../lib/theme";
 import { useAuth } from "../context/AuthContext";
-import { Download, FileText, LifeBuoy, Clock, AlertCircle } from "lucide-react";
+import { Download, FileText, Loader2 } from "lucide-react";
+import html2pdf from "html2pdf.js";
 
 const PIE_COLORS = ["#3b63f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
 
@@ -18,6 +19,7 @@ export default function Reports() {
 
 function TeacherReports() {
   const { theme } = useTheme();
+  const { user } = useAuth();
   const gridStroke = theme === "dark" ? "#334155" : "#e2e8f0";
   const tooltipStyle = {
     backgroundColor: "rgb(var(--surface))",
@@ -29,6 +31,30 @@ function TeacherReports() {
   const [weekDate, setWeekDate] = useState(todayISO());
   const weekStart = startOfWeekISO(weekDate);
   const weekEnd = endOfWeekISO(weekDate);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const pdfRef = useRef<HTMLDivElement>(null);
+
+  const generatePdf = useCallback(async () => {
+    if (!pdfRef.current || !summary || !user) return;
+    setGeneratingPdf(true);
+    try {
+      await html2pdf()
+        .set({
+          margin: [10, 10, 10, 10],
+          filename: `CSHS-TRACE-Report-${user.name.replace(/\s+/g, "-")}-${weekStart}.pdf`,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, logging: false },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+          pagebreak: { mode: ["avoid-all", "css", "legacy"] },
+        })
+        .from(pdfRef.current)
+        .save();
+    } catch (e) {
+      console.error("PDF generation failed", e);
+    } finally {
+      setGeneratingPdf(false);
+    }
+  }, [summary, user, weekStart]);
 
   const { data: summary } = usePolling<MySummary>(() => api("/api/reports/my-summary"), 30000);
   const { data: monthly } = usePolling<MonthlyLeaves>(() => api("/api/reports/my-monthly-leaves"), 60000);
@@ -74,6 +100,14 @@ function TeacherReports() {
             onClick={() => window.open(`/api/reports/export.csv?teacher_id=${user?.id}&from=${weekStart}&to=${weekEnd}`, "_blank")}
           >
             <Download size={14} /> CSV
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void generatePdf()}
+            disabled={generatingPdf || !summary}
+          >
+            {generatingPdf ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />} PDF
           </Button>
         </div>
       </div>
@@ -256,6 +290,196 @@ function TeacherReports() {
             )}
           </div>
         </Card>
+      </div>
+
+      <div ref={pdfRef} className="hidden">
+        <div style={{ fontFamily: "Arial, sans-serif", color: "#1e293b", padding: "20px", maxWidth: "800px" }}>
+          <div style={{ textAlign: "center", borderBottom: "3px solid #3b63f6", paddingBottom: "16px", marginBottom: "20px" }}>
+            <h1 style={{ fontSize: "22px", fontWeight: "bold", margin: 0, color: "#1e293b" }}>CSHS TRACE</h1>
+            <h2 style={{ fontSize: "16px", fontWeight: "600", margin: "4px 0", color: "#3b63f6" }}>Comprehensive Teacher Report</h2>
+            <p style={{ fontSize: "12px", color: "#64748b", margin: "4px 0 0" }}>
+              {user?.name} &mdash; {prettyDate(weekStart)} to {prettyDate(weekEnd)}
+            </p>
+            <p style={{ fontSize: "11px", color: "#94a3b8", margin: "2px 0 0" }}>
+              Generated on {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+            </p>
+          </div>
+
+          <div style={{ marginBottom: "20px" }}>
+            <h3 style={{ fontSize: "14px", fontWeight: "bold", color: "#3b63f6", borderBottom: "1px solid #e2e8f0", paddingBottom: "4px", marginBottom: "10px" }}>Summary</h3>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+              <tbody>
+                <tr>
+                  <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", fontWeight: "bold", width: "50%" }}>Leaves this week</td>
+                  <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>{summary?.leaves_this_week ?? "—"}</td>
+                  <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", fontWeight: "bold" }}>Relief this week</td>
+                  <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>{summary?.relief_this_week ?? "—"}</td>
+                </tr>
+                <tr>
+                  <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", fontWeight: "bold" }}>Total leaves filed</td>
+                  <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>{summary?.leaves_all_time ?? "—"}</td>
+                  <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", fontWeight: "bold" }}>Total relief periods</td>
+                  <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>{summary?.relief_all_time ?? "—"}</td>
+                </tr>
+                <tr>
+                  <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", fontWeight: "bold" }}>Pending leaves</td>
+                  <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>{summary?.leaves_pending ?? "—"}</td>
+                  <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", fontWeight: "bold" }}>Workload utilization</td>
+                  <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>{summary ? `${summary.utilization}%` : "—"}</td>
+                </tr>
+                <tr>
+                  <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", fontWeight: "bold" }}>Scheduled periods</td>
+                  <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>{summary?.scheduled_periods ?? "—"}</td>
+                  <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", fontWeight: "bold" }}>Total load / Max</td>
+                  <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>{summary ? `${summary.total_load} / ${summary.max_weekly_load}` : "—"}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style={{ marginBottom: "20px" }}>
+            <h3 style={{ fontSize: "14px", fontWeight: "bold", color: "#3b63f6", borderBottom: "1px solid #e2e8f0", paddingBottom: "4px", marginBottom: "10px" }}>Workload Breakdown</h3>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+              <thead>
+                <tr style={{ backgroundColor: "#f1f5f9" }}>
+                  <th style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "left" }}>Category</th>
+                  <th style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>Periods</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td style={{ padding: "6px 12px", border: "1px solid #e2e8f0" }}>Scheduled classes</td><td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>{workload?.scheduled_periods ?? "—"}</td></tr>
+                <tr><td style={{ padding: "6px 12px", border: "1px solid #e2e8f0" }}>Relief (this week)</td><td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>{workload?.relief_this_week ?? "—"}</td></tr>
+                <tr><td style={{ padding: "6px 12px", border: "1px solid #e2e8f0" }}>Available slots</td><td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>{workload?.available ?? "—"}</td></tr>
+                <tr><td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", fontWeight: "bold" }}>Max weekly load</td><td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center", fontWeight: "bold" }}>{workload?.max_weekly_load ?? "—"}</td></tr>
+                <tr><td style={{ padding: "6px 12px", border: "1px solid #e2e8f0" }}>Relief (all time)</td><td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>{workload?.relief_all_time ?? "—"}</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          {monthly && monthly.months.some((m) => m.n > 0) && (
+            <div style={{ marginBottom: "20px" }}>
+              <h3 style={{ fontSize: "14px", fontWeight: "bold", color: "#3b63f6", borderBottom: "1px solid #e2e8f0", paddingBottom: "4px", marginBottom: "10px" }}>Monthly Leaves (Last 6 Months)</h3>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+                <thead>
+                  <tr style={{ backgroundColor: "#f1f5f9" }}>
+                    {monthly.months.map((m) => (
+                      <th key={m.month} style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>{m.label}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    {monthly.months.map((m) => (
+                      <td key={m.month} style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>{m.n}</td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {bySubject && bySubject.subjects.length > 0 && (
+            <div style={{ marginBottom: "20px" }}>
+              <h3 style={{ fontSize: "14px", fontWeight: "bold", color: "#3b63f6", borderBottom: "1px solid #e2e8f0", paddingBottom: "4px", marginBottom: "10px" }}>Relief by Subject</h3>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+                <thead>
+                  <tr style={{ backgroundColor: "#f1f5f9" }}>
+                    <th style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "left" }}>Subject</th>
+                    <th style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>Periods Covered</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bySubject.subjects.map((s) => (
+                    <tr key={s.subject}>
+                      <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0" }}>{s.subject}</td>
+                      <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>{s.n}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {reasons && reasons.reasons.length > 0 && (
+            <div style={{ marginBottom: "20px" }}>
+              <h3 style={{ fontSize: "14px", fontWeight: "bold", color: "#3b63f6", borderBottom: "1px solid #e2e8f0", paddingBottom: "4px", marginBottom: "10px" }}>Leave Reasons</h3>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+                <thead>
+                  <tr style={{ backgroundColor: "#f1f5f9" }}>
+                    <th style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "left" }}>Reason</th>
+                    <th style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reasons.reasons.map((r) => (
+                    <tr key={r.reason}>
+                      <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0" }}>{r.reason}</td>
+                      <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>{r.n}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {leaveHistory && leaveHistory.history.length > 0 && (
+            <div style={{ marginBottom: "20px" }}>
+              <h3 style={{ fontSize: "14px", fontWeight: "bold", color: "#3b63f6", borderBottom: "1px solid #e2e8f0", paddingBottom: "4px", marginBottom: "10px" }}>Leave History ({prettyDate(weekStart)} — {prettyDate(weekEnd)})</h3>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+                <thead>
+                  <tr style={{ backgroundColor: "#f1f5f9" }}>
+                    <th style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "left" }}>Date</th>
+                    <th style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>Period</th>
+                    <th style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "left" }}>Reason</th>
+                    <th style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leaveHistory.history.map((r) => (
+                    <tr key={r.id}>
+                      <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0" }}>{prettyDate(r.date)}</td>
+                      <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>{r.period}</td>
+                      <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0" }}>{r.reason || "—"}</td>
+                      <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>{r.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {reliefHistory && reliefHistory.history.length > 0 && (
+            <div style={{ marginBottom: "20px" }}>
+              <h3 style={{ fontSize: "14px", fontWeight: "bold", color: "#3b63f6", borderBottom: "1px solid #e2e8f0", paddingBottom: "4px", marginBottom: "10px" }}>Relief History ({prettyDate(weekStart)} — {prettyDate(weekEnd)})</h3>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+                <thead>
+                  <tr style={{ backgroundColor: "#f1f5f9" }}>
+                    <th style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "left" }}>Date</th>
+                    <th style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>Period</th>
+                    <th style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "left" }}>Subject</th>
+                    <th style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "left" }}>Class</th>
+                    <th style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reliefHistory.history.map((r) => (
+                    <tr key={r.id}>
+                      <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0" }}>{prettyDate(r.date)}</td>
+                      <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>{r.period}</td>
+                      <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0" }}>{r.subject || "—"}</td>
+                      <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0" }}>{r.class_name || "—"}</td>
+                      <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", textAlign: "center" }}>{r.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: "10px", marginTop: "20px", textAlign: "center", fontSize: "10px", color: "#94a3b8" }}>
+            CSHS TRACE &mdash; Teacher Leave &amp; Reliever Coordination System
+          </div>
+        </div>
       </div>
     </div>
   );
