@@ -33,6 +33,20 @@ function TeacherReports() {
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const pdfRef = useRef<HTMLDivElement>(null);
 
+  const { data: summary } = usePolling<MySummary>(() => api("/api/reports/my-summary"), 30000);
+  const { data: monthly } = usePolling<MonthlyLeaves>(() => api("/api/reports/my-monthly-leaves"), 60000);
+  const { data: bySubject } = usePolling<ReliefBySubject>(() => api("/api/reports/my-relief-by-subject"), 60000);
+  const { data: workload } = usePolling<MyWorkload>(() => api("/api/reports/my-workload"), 30000);
+  const { data: reasons, error: reasonsError } = usePolling<{ reasons: { reason: string; n: number }[] }>(
+    () => api("/api/reports/absences-by-reason"), 60000
+  );
+  const { data: leaveHistory } = usePolling<{ history: { id: number; date: string; period: number; reason: string; status: string; created_at: string }[] }>(
+    () => api(`/api/reports/history?teacher_id=${user?.id}&from=${weekStart}&to=${weekEnd}`), 30000, [weekStart, weekEnd]
+  );
+  const { data: reliefHistory } = usePolling<{ history: { id: number; date: string; period: number; subject: string; class_name: string; status: string; absent_teacher_name: string }[] }>(
+    () => api(`/api/reports/history?teacher_id=${user?.id}&from=${weekStart}&to=${weekEnd}`), 30000, [weekStart, weekEnd]
+  );
+
   const generatePdf = useCallback(async () => {
     if (!pdfRef.current || !summary || !user) return;
     setGeneratingPdf(true);
@@ -55,20 +69,6 @@ function TeacherReports() {
       setGeneratingPdf(false);
     }
   }, [summary, user, weekStart]);
-
-  const { data: summary } = usePolling<MySummary>(() => api("/api/reports/my-summary"), 30000);
-  const { data: monthly } = usePolling<MonthlyLeaves>(() => api("/api/reports/my-monthly-leaves"), 60000);
-  const { data: bySubject } = usePolling<ReliefBySubject>(() => api("/api/reports/my-relief-by-subject"), 60000);
-  const { data: workload } = usePolling<MyWorkload>(() => api("/api/reports/my-workload"), 30000);
-  const { data: reasons, error: reasonsError } = usePolling<{ reasons: { reason: string; n: number }[] }>(
-    () => api("/api/reports/absences-by-reason"), 60000
-  );
-  const { data: leaveHistory } = usePolling<{ history: { id: number; date: string; period: number; reason: string; status: string; created_at: string }[] }>(
-    () => api(`/api/reports/history?teacher_id=${user?.id}&from=${weekStart}&to=${weekEnd}`), 30000, [weekStart, weekEnd]
-  );
-  const { data: reliefHistory } = usePolling<{ history: { id: number; date: string; period: number; subject: string; class_name: string; status: string; absent_teacher_name: string }[] }>(
-    () => api(`/api/reports/history?teacher_id=${user?.id}&from=${weekStart}&to=${weekEnd}`), 30000, [weekStart, weekEnd]
-  );
 
   const workloadPie = useMemo(() => {
     if (!workload) return [];
