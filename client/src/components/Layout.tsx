@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -20,8 +20,8 @@ import { ThemeToggle } from "./ThemeToggle";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, adminOnly: false },
-  { to: "/reports", label: "Reports", icon: BarChart3, adminOnly: false },
-  { to: "/file-leave", label: "File a leave", icon: FileDown, adminOnly: false },
+  { to: "/?panel=reports", label: "Reports", icon: BarChart3, adminOnly: false, panel: "reports" },
+  { to: "/?panel=leave", label: "File a leave", icon: FileDown, adminOnly: false, panel: "leave" },
   { to: "/availability", label: "Availability Calendar", icon: CalendarCheck, adminOnly: false },
   { to: "/requests", label: "Leave Requests", icon: ClipboardList, adminOnly: true },
   { to: "/relief", label: "Reliever Finder", icon: LifeBuoy, adminOnly: true },
@@ -33,6 +33,7 @@ export default function Layout() {
   const { user, logout } = useAuth();
   const { systemName, tagline, hasLogo, assetsVersion } = useBrand();
   const navigate = useNavigate();
+  const { pathname, search } = useLocation();
   const [time, setTime] = useState(() => new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false }));
 
   useEffect(() => {
@@ -41,6 +42,12 @@ export default function Layout() {
   }, []);
 
   if (!user) return null;
+
+  const activePanel = search.startsWith("?panel=") ? search.slice("?panel=".length) : null;
+
+  function navClass(active: boolean) {
+    return `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${active ? "bg-brand-600 text-white" : "hover:bg-slate-800 hover:text-white"}`;
+  }
 
   return (
     <div className="min-h-screen bg-canvas flex">
@@ -63,21 +70,19 @@ export default function Layout() {
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
           {navItems
             .filter((item) => !item.adminOnly || user.role === "admin")
-            .map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === "/"}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                  isActive ? "bg-brand-600 text-white" : "hover:bg-slate-800 hover:text-white"
-                }`
-              }
-            >
-              <Icon size={17} />
-              <span className="flex-1">{label}</span>
-            </NavLink>
-          ))}
+            .map(({ to, label, icon: Icon, panel }) => {
+              const active = panel
+                ? activePanel === panel
+                : to === "/"
+                  ? pathname === "/" && activePanel === null
+                  : pathname === to;
+              return (
+                <Link key={to} to={to} className={navClass(active)}>
+                  <Icon size={17} />
+                  <span className="flex-1">{label}</span>
+                </Link>
+              );
+            })}
         </nav>
         <div className="px-4 py-4 border-t border-slate-800">
           <div className="text-sm text-white font-medium truncate">{user.name}</div>
