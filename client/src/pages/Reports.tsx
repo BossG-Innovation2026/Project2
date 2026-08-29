@@ -7,7 +7,6 @@ import { startOfWeekISO, endOfWeekISO, todayISO, addDaysISO, prettyDate } from "
 import { useTheme } from "../lib/theme";
 import { useAuth } from "../context/AuthContext";
 import { Download, FileText, Loader2 } from "lucide-react";
-import html2pdf from "html2pdf.js";
 
 const PIE_COLORS = ["#3b63f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
 
@@ -38,6 +37,7 @@ function TeacherReports() {
     if (!pdfRef.current || !summary || !user) return;
     setGeneratingPdf(true);
     try {
+      const html2pdf = (await import("html2pdf.js")).default;
       await html2pdf()
         .set({
           margin: [10, 10, 10, 10],
