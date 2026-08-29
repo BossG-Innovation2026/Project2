@@ -190,12 +190,24 @@ export default function Dashboard() {
         </>
       ) : (
         <>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Stat label="Hours Relieved" value={data.relief_hours} sub="periods done" />
-        <Stat label="Hours on Leave" value={data.leave_hours} sub="periods taken" />
-        <Stat label="Pending leaves" value={s.pending_absences} />
-        <Stat label="Leaves this week" value={s.absences_this_week} />
-      </div>
+      {pendingAssignments.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+          <LifeBuoy size={20} className="text-amber-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800">Relief assignment offer pending</p>
+            <p className="text-sm text-amber-700">You have {pendingAssignments.length} pending relief {pendingAssignments.length === 1 ? "assignment" : "assignments"} waiting for your response.</p>
+          </div>
+        </div>
+      )}
+      {data.my_absences.some((a) => a.status === "approved") && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 flex items-start gap-3">
+          <CheckCircle2 size={20} className="text-emerald-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-emerald-800">Leave request approved</p>
+            <p className="text-sm text-emerald-700">Your leave {data.my_absences.filter((a) => a.status === "approved").length === 1 ? "request has" : "requests have"} been approved.</p>
+          </div>
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-3 gap-6">
         <Card>
