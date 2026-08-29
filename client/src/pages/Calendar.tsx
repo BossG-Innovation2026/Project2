@@ -42,7 +42,7 @@ export default function Calendar() {
         <div>
           <h1 className="text-xl font-bold text-fg">Coverage Calendar</h1>
           <p className="text-sm text-muted">
-            {prettyDate(weekStart)} â€” {prettyDate(weekEnd)}
+            {prettyDate(weekStart)} — {prettyDate(weekEnd)}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -107,7 +107,7 @@ export default function Calendar() {
                     const dayCells = cells.filter((c) => c.period === period && c.date === date);
                     return (
                       <td key={i} className="px-1 py-1 align-top border-t border-line">
-                        {dayCells.length === 0 && <div className="h-8 text-[10px] text-dim text-center">â€”</div>}
+                        {dayCells.length === 0 && <div className="h-8 text-[10px] text-dim text-center">—</div>}
                         {dayCells.map((c) => (
                           <CellBadge key={c.teacher_id} c={c} isAdmin={user?.role === "admin"} />
                         ))}
@@ -138,13 +138,13 @@ function CellBadge({ c, isAdmin }: { c: CoverageCell; isAdmin: boolean }) {
     const covered = ["assigned", "accepted", "overridden"].includes(c.assignment_status ?? "");
     return (
       <div
-        title={`${c.teacher_name} â€” ${c.absence_reason || "leave"}${c.reliever_name ? ` Â· covered by ${c.reliever_name}` : ""}`}
+        title={`${c.teacher_name} — ${c.absence_reason || "leave"}${c.reliever_name ? ` · covered by ${c.reliever_name}` : ""}`}
         className={`rounded-md px-1.5 py-0.5 my-0.5 text-[10px] leading-tight border ${
           covered ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-amber-300 bg-amber-50 text-amber-800"
         }`}
       >
         <span className="font-medium">{c.teacher_name.split(" ").slice(-1)[0]}</span>
-        <span className="opacity-70"> Â· leave</span>
+        <span className="opacity-70"> · leave</span>
         {c.reliever_name && <span className="text-emerald-600 font-medium"> â†’ {c.reliever_name.split(" ").slice(-1)[0]}</span>}
         {!covered && isAdmin && <span> âš </span>}
       </div>
@@ -153,10 +153,10 @@ function CellBadge({ c, isAdmin }: { c: CoverageCell; isAdmin: boolean }) {
   return (
     <div
       className={`rounded-md px-1.5 py-0.5 my-0.5 text-[10px] leading-tight border ${PERIOD_COLORS[c.status]}`}
-      title={c.status === "class" ? `${c.teacher_name} â€” ${c.subject} (${c.class_name})` : `${c.teacher_name} â€” ${c.status}`}
+      title={c.status === "class" ? `${c.teacher_name} — ${c.subject} (${c.class_name})` : `${c.teacher_name} — ${c.status}`}
     >
       <span className="font-medium">{c.teacher_name.split(" ").slice(-1)[0]}</span>
-      {c.status === "class" && <span className="opacity-70"> Â· {c.class_name || c.subject}</span>}
+      {c.status === "class" && <span className="opacity-70"> · {c.class_name || c.subject}</span>}
     </div>
   );
 }

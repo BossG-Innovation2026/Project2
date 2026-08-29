@@ -13,17 +13,33 @@ interface SettingsPayload {
 }
 
 const SUBJECT_DEFAULTS: Record<string, number> = {
-  language: 4,
+  "gen-math": 5,
+  "gen-sci": 5,
+  "history": 5,
+  "life-skills": 5,
+  "language": 5,
 };
 
 function defaultSessions(subject: string): number {
   const key = subject.trim().toLowerCase();
-  if (/^elective\d+$/.test(key)) return 0;
-  return SUBJECT_DEFAULTS[key] ?? 5;
+  return SUBJECT_DEFAULTS[key] ?? 0;
 }
 
 export default function Generator() {
   const { classes, subjects, clusters } = useBrand();
+  const classNames = useMemo(() => classes.map((c) => c.name).filter(Boolean), [classes]);
+  const subjectNames = useMemo(() => subjects.map((s) => s.name || s.code).filter(Boolean), [subjects]);
+  const [bracketSelector, setBracketSelector] = useState("");
+  const [teacherOverrides, setTeacherOverrides] = useState<Record<string, Record<string, number>>>({});
+  const bracketNames = useMemo(() => {
+    const set = new Set<string>();
+    for (const c of classes) if (c.cluster) set.add(c.cluster);
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [classes]);
+  const filteredClassNames = useMemo(
+    () => bracketSelector ? classNames.filter((n) => classes.find((c) => c.name === n)?.cluster === bracketSelector) : classNames,
+    [classNames, bracketSelector, classes]
+  );
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [periodCount, setPeriodCount] = useState(8);
   const [matrix, setMatrix] = useState<Record<string, Record<string, number>>>({});
@@ -50,18 +66,29 @@ export default function Generator() {
   useEffect(() => {
     setMatrix((m) => {
       const next: Record<string, Record<string, number>> = {};
-      for (const cls of classes) {
+      for (const cls of classNames) {
         next[cls] = { ...m[cls] };
-        for (const s of subjects) if (next[cls][s] === undefined) next[cls][s] = defaultSessions(s);
+        for (const s of subjectNames) if (next[cls][s] === undefined) next[cls][s] = defaultSessions(s);
       }
       return next;
     });
-    setViewClass((v) => (classes.includes(v) ? v : v || classes[0] || ""));
-  }, [classes, subjects]);
+    setViewClass((v) => (classNames.includes(v) ? v : v || classNames[0] || ""));
+  }, [classNames, subjectNames]);
+
+  useEffect(() => {
+    setTeacherOverrides((prev) => {
+      const next: Record<string, Record<string, number>> = {};
+      for (const bracket of bracketNames) {
+        next[bracket] = { ...(prev[bracket] ?? {}) };
+        for (const s of subjectNames) if (next[bracket][s] === undefined) next[bracket][s] = 0;
+      }
+      return next;
+    });
+  }, [bracketNames, subjectNames]);
 
   const specialistCount = useMemo(() => {
     const map = new Map<string, number>();
-    for (const s of subjects) {
+    for (const s of subjectNames) {
       const key = s.toLowerCase();
       map.set(
         s,
@@ -69,37 +96,37 @@ export default function Generator() {
       );
     }
     return map;
-  }, [subjects, teachers]);
+  }, [subjectNames, teachers]);
 
   const totals = useMemo(() => {
     let sessions = 0;
-    for (const cls of classes) {
-      for (const s of subjects) sessions += matrix[cls]?.[s] ?? 0;
+    for (const cls of filteredClassNames) {
+      for (const s of subjectNames) sessions += matrix[cls]?.[s] ?? 0;
     }
     return sessions;
-  }, [classes, subjects, matrix]);
+  }, [filteredClassNames, subjectNames, matrix]);
 
   const weeklyCapacity = periodCount * 5;
 
   const overCapacity = useMemo(() => {
-    return classes
+    return filteredClassNames
       .map((cls) => ({
         cls,
-        n: subjects.reduce((a, s) => a + (matrix[cls]?.[s] ?? 0), 0),
+        n: subjectNames.reduce((a, s) => a + (matrix[cls]?.[s] ?? 0), 0),
       }))
       .filter((x) => x.n > weeklyCapacity);
-  }, [classes, subjects, matrix, weeklyCapacity]);
+  }, [filteredClassNames, subjectNames, matrix, weeklyCapacity]);
 
   const overFive = useMemo(() => {
     const found: { cls: string; subject: string; n: number }[] = [];
-    for (const cls of classes) {
-      for (const s of subjects) {
+    for (const cls of filteredClassNames) {
+      for (const s of subjectNames) {
         const v = matrix[cls]?.[s] ?? 0;
         if (v > 5) found.push({ cls, subject: s, n: v });
       }
     }
     return found;
-  }, [classes, subjects, matrix]);
+  }, [filteredClassNames, subjectNames, matrix]);
 
   function setCell(cls: string, subj: string, val: number) {
     setMatrix((m) => ({
@@ -118,7 +145,20 @@ export default function Generator() {
     try {
       let list = teachers;
       if (list.length === 0) list = (await api<{ teachers: Teacher[] }>("/api/teachers")).teachers ?? [];
-      const res = generateTimetable({ classes, clusters, curriculum: matrix, teachers: list, periodCount });
+      const overrides: Record<string, number> = {};
+      if (bracketSelector && teacherOverrides[bracketSelector]) {
+        for (const [subj, tid] of Object.entries(teacherOverrides[bracketSelector])) {
+          if (tid > 0) overrides[subj] = tid;
+        }
+      }
+      const res = generateTimetable({
+        classes: filteredClassNames,
+        clusters,
+        curriculum: matrix,
+        teachers: list,
+        periodCount,
+        teacherOverrides: Object.keys(overrides).length > 0 ? overrides : undefined,
+      });
       setResult(res);
       setPhase("preview");
     } catch (err) {
@@ -204,7 +244,7 @@ export default function Generator() {
       ps.sort((a, b) => a - b);
       for (let i = 0; i < ps.length; i++) {
         if (ps[i] !== i + 1) {
-          setDropError("Move rejected â€” periods must stay compressed with no gaps");
+          setDropError("Move rejected — periods must stay compressed with no gaps");
           return;
         }
       }
@@ -266,17 +306,32 @@ export default function Generator() {
         <Card>
           <CardHeader
             title="Curriculum matrix"
-            subtitle={`Sessions per week for each class Ã— subject Â· ${totals} total session${totals === 1 ? "" : "s"} entered`}
+            subtitle={`Sessions per week for each class × subject · ${totals} total session${totals === 1 ? "" : "s"} entered`}
           />
-          {classes.length === 0 || subjects.length === 0 ? (
+          {classNames.length === 0 || subjectNames.length === 0 ? (
             <EmptyState message="Add classes and subjects in Settings first." />
           ) : (
+            <>
+            {bracketNames.length > 0 && (
+              <div className="px-4 pt-3 flex items-center gap-3">
+                <label className="text-sm font-medium text-muted">Bracket:</label>
+                <Select value={bracketSelector} onChange={(e) => setBracketSelector(e.target.value)} className="w-48">
+                  <option value="">All classes</option>
+                  {bracketNames.map((b) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </Select>
+                {bracketSelector && (
+                  <span className="text-xs text-dim">{filteredClassNames.length} class{filteredClassNames.length === 1 ? "" : "es"}</span>
+                )}
+              </div>
+            )}
             <div className="overflow-x-auto p-4 pt-0">
               <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr>
                     <th className="text-left py-2 pr-3 font-medium text-muted sticky left-0 bg-surface">Class</th>
-                    {subjects.map((s) => (
+                    {subjectNames.map((s) => (
                       <th key={s} className="px-2 py-2 font-medium text-muted min-w-24">
                         <div>{s}</div>
                         <div className="text-[10px] font-normal text-dim">
@@ -287,9 +342,31 @@ export default function Generator() {
                       </th>
                     ))}
                   </tr>
+                  {bracketSelector && (
+                    <tr>
+                      <th className="text-left py-1 pr-3 text-xs text-dim sticky left-0 bg-surface">Teacher</th>
+                      {subjectNames.map((s) => (
+                        <th key={s} className="px-1 py-1">
+                          <Select
+                            value={teacherOverrides[bracketSelector]?.[s] ?? 0}
+                            onChange={(e) => setTeacherOverrides((prev) => ({
+                              ...prev,
+                              [bracketSelector]: { ...(prev[bracketSelector] ?? {}), [s]: Number(e.target.value) },
+                            }))}
+                            className="w-full text-[11px] py-0.5 px-1"
+                          >
+                            <option value={0}>Auto</option>
+                            {teachers.filter((t) => t.active === 1 && parseSubjectList(t.subjects ?? "").includes(s.toLowerCase())).map((t) => (
+                              <option key={t.id} value={t.id}>{t.name}</option>
+                            ))}
+                          </Select>
+                        </th>
+                      ))}
+                    </tr>
+                  )}
                 </thead>
                 <tbody>
-                  {classes.map((cls) => (
+                  {filteredClassNames.map((cls) => (
                     <tr key={cls} className="border-t border-line">
                       <td className="py-2 pr-3 font-medium text-fg whitespace-nowrap sticky left-0 bg-surface">
                         {cls}
@@ -297,7 +374,7 @@ export default function Generator() {
                           <Badge className="ml-2 bg-hov text-fg border-line">{clusters[cls]}</Badge>
                         )}
                       </td>
-                      {subjects.map((s) => (
+                      {subjectNames.map((s) => (
                         <td key={s} className="px-1 py-1.5">
                           <input
                             type="number"
@@ -318,27 +395,28 @@ export default function Generator() {
                 </tbody>
               </table>
               <p className="text-xs text-dim mt-3">
-                Red cells have no teacher who specializes in that subject â€” add specializations in Teachers, or those sessions will be left unplaced.
+                Red cells have no teacher who specializes in that subject — add specializations in Teachers, or those sessions will be left unplaced.
               </p>
               {overFive.length > 0 && (
                 <p className="text-xs font-medium text-amber-600 mt-2">
-                  Values above 5 are capped at 5 â€” a subject cannot meet twice in one day ({overFive.length} cell{overFive.length === 1 ? "" : "s"} affected).
+                  Values above 5 are capped at 5 — a subject cannot meet twice in one day ({overFive.length} cell{overFive.length === 1 ? "" : "s"} affected).
                 </p>
               )}
               {overCapacity.length > 0 && (
                 <div className="mt-2 space-y-1">
                   {overCapacity.map(({ cls, n }) => (
                     <p key={cls} className="text-xs font-medium text-red-500">
-                      {cls}: {n} sessions but only {weeklyCapacity} weekly slots ({periodCount} periods Ã— 5 days) â€” some will be left unplaced.
+                      {cls}: {n} sessions but only {weeklyCapacity} weekly slots ({periodCount} periods × 5 days) — some will be left unplaced.
                     </p>
                   ))}
                 </div>
               )}
             </div>
+            </>
           )}
           <div className="flex justify-end gap-3 px-4 pb-4">
             <Button disabled={busy || totals === 0} onClick={() => simulate()}>
-              {busy ? <Spinner label="Simulatingâ€¦" /> : "Simulate timetable"}
+              {busy ? <Spinner label="Simulating..." /> : "Simulate timetable"}
             </Button>
           </div>
         </Card>
@@ -362,13 +440,13 @@ export default function Generator() {
 
             {result.unplaced.length > 0 && (
               <Card>
-                <CardHeader title="Unplaced sessions" subtitle="These could not fit under the hard rules â€” adjust loads or specializations and regenerate." />
+                <CardHeader title="Unplaced sessions" subtitle="These could not fit under the hard rules — adjust loads or specializations and regenerate." />
                 <ul className="divide-y divide-line">
                   {result.unplaced.map((u) => (
                     <li key={`${u.class_name}|${u.subject}`} className="px-4 py-2.5 flex items-center justify-between text-sm">
-                      <span className="font-medium text-fg">{u.class_name} Â· {u.subject}</span>
+                      <span className="font-medium text-fg">{u.class_name} · {u.subject}</span>
                       <span className="flex items-center gap-2">
-                        <span className="text-dim">Ã—{u.sessions}</span>
+                        <span className="text-dim">×{u.sessions}</span>
                         <Badge className="bg-red-50 text-red-600 border-red-200">{u.reason}</Badge>
                       </span>
                     </li>
@@ -380,10 +458,10 @@ export default function Generator() {
               <Card>
                 <CardHeader
                   title="Simulated timetable"
-                  subtitle="Simulation only â€” drag cells to move or swap. Nothing is saved until you confirm."
+                  subtitle="Simulation only — drag cells to move or swap. Nothing is saved until you confirm."
                   actions={
                     <Select value={viewClass} onChange={(e) => setViewClass(e.target.value)} className="w-44">
-                      {classes.map((c) => (
+                      {classNames.map((c) => (
                         <option key={c} value={c}>{c}</option>
                       ))}
                     </Select>
@@ -485,7 +563,7 @@ export default function Generator() {
             <div className="flex justify-end gap-3">
               <Button variant="secondary" onClick={() => setConfirmOpen(false)}>Cancel</Button>
               <Button disabled={busy} onClick={apply}>
-                {busy ? <Spinner label="Applyingâ€¦" /> : "Yes, replace everything"}
+                {busy ? <Spinner label="Applying..." /> : "Yes, replace everything"}
               </Button>
             </div>
           </div>

@@ -1,8 +1,8 @@
-﻿import { useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { api, type Absence, type ReliefRow, type Teacher } from "../api";
 import { usePolling } from "../hooks/usePolling";
 import { Card, CardHeader, Badge, Button, Modal, Spinner, EmptyState, Flash, Select } from "../components/ui";
-import { prettyDate, RELIEF_STATUS_STYLE, todayISO, addDaysISO, PERIOD_COLORS } from "../lib/format";
+import { prettyDate, RELIEF_STATUS_STYLE, todayISO, addDaysISO } from "../lib/format";
 import { useAuth } from "../context/AuthContext";
 import { CheckCircle2, XCircle, ShieldAlert, RefreshCw } from "lucide-react";
 
@@ -32,21 +32,21 @@ export default function Relief() {
   const isAdmin = user?.role === "admin";
   const [refreshKey, setRefreshKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [assigning, setAssigning] = useState<{ absence: Absence; candidates: Candidate[] } | null>(null);
+  const [confirm, setConfirm] = useState<{ absence: Absence; candidate: Candidate } | null>(null);
+  const [assigning, setAssigning] = useState(false);
   const [override, setOverride] = useState(false);
   const [overrideTeacher, setOverrideTeacher] = useState<number>(0);
+  const [matches, setMatches] = useState<Record<number, Candidate[]>>({});
 
   const { data } = usePolling<{ assignments: ReliefRow[] }>(
     () => api(`/api/relief${isAdmin ? "" : "?mine=1"}`),
     10000,
     [refreshKey, isAdmin]
   );
-
   const { data: teachers } = usePolling<{ teachers: Teacher[] }>(
     () => api("/api/teachers"),
     60000
   );
-
   const { data: absences } = usePolling<{ absences: Absence[] }>(
     () => api("/api/absences?status=approved&from=" + todayISO() + "&to=" + addDaysISO(todayISO(), 60)),
     30000,
@@ -64,32 +64,37 @@ export default function Relief() {
     return uncovered;
   }, [absences, assignments]);
 
-  if (!data || !absences) return <Spinner />;
-
-  async function openAssign(absence: Absence) {
-    setError(null);
-    setOverride(false);
-    setOverrideTeacher(0);
-    try {
-      const res = await api<{ candidates: Candidate[] }>(`/api/relief/candidates/${absence.id}`);
-      setAssigning({ absence, candidates: res.candidates });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load candidates");
+  useEffect(() => {
+    if (!isAdmin || approvedAbsences.length === 0) return;
+    let alive = true;
+    for (const a of approvedAbsences) {
+      api<{ candidates: Candidate[] }>(`/api/relief/candidates/${a.id}`)
+        .then((d) => { if (alive) setMatches((m) => ({ ...m, [a.id]: d.candidates ?? [] })); })
+        .catch(() => {});
     }
+    return () => { alive = false; };
+  }, [approvedAbsences, isAdmin, refreshKey]);
+
+  async function confirmAssign(absence: Absence, candidate: Candidate) {
+    setConfirm({ absence, candidate });
   }
 
-  async function assign(absenceId: number, relieverId: number, useOverride: boolean) {
+  async function executeAssign(absenceId: number, relieverId: number) {
+    setAssigning(true);
     setError(null);
     try {
       await api("/api/relief/assign", {
         method: "POST",
-        body: JSON.stringify({ absence_id: absenceId, reliever_id: relieverId, override: useOverride }),
+        body: JSON.stringify({ absence_id: absenceId, reliever_id: relieverId, override: override && relieverId > 0 }),
       });
-      setAssigning(null);
+      setConfirm(null);
+      setOverride(false);
+      setOverrideTeacher(0);
       setRefreshKey((k) => k + 1);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Assignment failed";
-      setError(msg);
+      setError(e instanceof Error ? e.message : "Assignment failed");
+    } finally {
+      setAssigning(false);
     }
   }
 
@@ -102,6 +107,8 @@ export default function Relief() {
       setError(e instanceof Error ? e.message : "Failed to respond");
     }
   }
+
+  if (!data || !absences) return <Spinner />;
 
   return (
     <div className="space-y-4">
@@ -122,26 +129,42 @@ export default function Relief() {
       {isAdmin && (
         <Card>
           <CardHeader title="Needs a reliever" subtitle="Approved leaves without a confirmed reliever (next 60 days)" />
-          <div className="p-3">
-            {approvedAbsences.length === 0 && <EmptyState message="All approved leaves are covered" />}
-            {approvedAbsences.map((a) => (
-              <div key={a.id} className="flex items-center justify-between px-3 py-2.5 border-b border-slate-50 last:border-0">
-                <div>
-                  <div className="text-sm font-medium text-fg">{a.teacher_name}</div>
-                  <div className="text-xs text-muted">{prettyDate(a.date)} Â· Period {a.period}{a.reason ? ` Â· ${a.reason}` : ""}</div>
+          <div className="p-3 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+            {approvedAbsences.length === 0 && <div className="col-span-full"><EmptyState message="All approved leaves are covered" /></div>}
+            {approvedAbsences.map((a) => {
+              const cands = matches[a.id] ?? [];
+              return (
+                <div key={a.id} className="rounded-lg border border-line bg-surface overflow-hidden">
+                  <div className="px-3 py-2 bg-subtle border-b border-line">
+                    <div className="text-xs font-semibold text-fg truncate">{a.teacher_name}</div>
+                    <div className="text-[11px] text-muted truncate">{prettyDate(a.date)} · P{a.period}</div>
+                    {a.reason && <div className="text-[10px] text-dim truncate">{a.reason}</div>}
+                  </div>
+
+                  <div className="px-3 py-2">
+                    {cands.length === 0 ? (
+                      <div className="text-[11px] text-dim">Loading…</div>
+                    ) : (
+                      <>
+                        <div className="text-[10px] font-semibold text-dim uppercase tracking-wide mb-1.5">Recommended</div>
+                        <div className="space-y-1">
+                          {cands.map((c) => (
+                            <button
+                              key={c.teacher_id}
+                              type="button"
+                              onClick={() => confirmAssign(a, c)}
+                              className="w-full text-left text-xs text-fg hover:text-brand-600 truncate"
+                            >
+                              {c.name}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {assignments
-                    .filter((r) => r.absence_id === a.id)
-                    .map((r) => (
-                      <Badge key={r.id} className={RELIEF_STATUS_STYLE[r.status]}>
-                        {r.reliever_name} Â· {r.status}
-                      </Badge>
-                    ))}
-                  <Button size="sm" onClick={() => void openAssign(a)}>Match reliever</Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </Card>
       )}
@@ -149,8 +172,8 @@ export default function Relief() {
       <Card>
         <CardHeader title={isAdmin ? "All assignments" : "My assignments"} subtitle="Recommended, assigned and responded" />
         <div className="p-3">
-          {assignments.length === 0 && <EmptyState message="No assignments yet" />}
-          {assignments.map((r) => (
+          {assignments.filter((r) => r.status !== "recommended").length === 0 && <EmptyState message="No assignments yet" />}
+          {assignments.filter((r) => r.status !== "recommended").map((r) => (
             <div key={r.id} className="flex items-center justify-between px-3 py-2.5 border-b border-slate-50 last:border-0">
               <div>
                 <div className="text-sm font-medium text-fg">
@@ -162,7 +185,7 @@ export default function Relief() {
                   )}
                 </div>
                 <div className="text-xs text-muted">
-                  {prettyDate(r.date)} Â· Period {r.period} Â· {r.class_name || r.subject || "â€”"}
+                  {prettyDate(r.date)} · Period {r.period} · {r.class_name || r.subject || "—"}
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -183,63 +206,48 @@ export default function Relief() {
         </div>
       </Card>
 
-      <Modal open={!!assigning} onClose={() => setAssigning(null)} title="Match a reliever" wide>
-        {assigning && (
+      {confirm && (
+        <Modal open onClose={() => setConfirm(null)} title={`Assign reliever to ${confirm.absence.teacher_name}`}>
           <div className="space-y-4">
             <div className="rounded-lg bg-subtle p-3 text-sm">
-              <span className="font-medium text-fg">{assigning.absence.teacher_name}</span>
+              <span className="font-medium text-fg">{confirm.candidate.name}</span>
               <span className="text-muted">
-                {" "}â€” {prettyDate(assigning.absence.date)}, Period {assigning.absence.period}
-                {assigning.absence.reason ? ` (${assigning.absence.reason})` : ""}
+                {" "}— {prettyDate(confirm.absence.date)}, Period {confirm.absence.period}
+                {confirm.absence.reason ? ` (${confirm.absence.reason})` : ""}
               </span>
             </div>
 
-            <div>
-              <div className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
-                Recommended (auto-ranked: least workload first)
+            <div className="grid grid-cols-3 gap-1.5 text-[11px]">
+              <div className="rounded border border-line bg-subtle px-2 py-1 min-w-0">
+                <div className="font-semibold uppercase tracking-wide text-dim">Before · P{confirm.absence.period - 1}</div>
+                <div className="text-muted truncate">
+                  {confirm.candidate.schedule_before
+                    ? `${confirm.candidate.schedule_before.subject || "—"}${confirm.candidate.schedule_before.class_name ? ` (${confirm.candidate.schedule_before.class_name})` : ""}`
+                    : "Free"}
+                </div>
               </div>
-              {assigning.candidates.length === 0 && (
-                <EmptyState message="No conflict-free candidates available. Use manual override." />
-              )}
-              <div className="space-y-2">
-                {assigning.candidates.map((c) => (
-                  <div key={c.teacher_id} className="rounded-lg border border-line px-4 py-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium text-fg">{c.name}</div>
-                        <div className="text-xs text-muted truncate">
-                          {[c.department, c.subjects, c.cluster, c.room].filter(Boolean).join(" Â· ") || "â€”"}
-                          {" "}Â· workload this week: {c.workload_this_week}
-                        </div>
-                      </div>
-                      <Button size="sm" onClick={() => void assign(assigning.absence.id, c.teacher_id, false)}>
-                        Assign
-                      </Button>
-                    </div>
-                    <div className="mt-2 grid grid-cols-3 gap-1.5 text-[11px]">
-                      <div className="rounded border border-line bg-subtle px-2 py-1 min-w-0">
-                        <div className="font-semibold uppercase tracking-wide text-dim">Before Â· P{assigning.absence.period - 1}</div>
-                        <div className="text-muted truncate">
-                          {c.schedule_before
-                            ? `${c.schedule_before.subject || "â€”"}${c.schedule_before.class_name ? ` (${c.schedule_before.class_name})` : ""}`
-                            : "Free"}
-                        </div>
-                      </div>
-                      <div className="rounded border border-brand-300 bg-brand-50 px-2 py-1 min-w-0">
-                        <div className="font-semibold uppercase tracking-wide text-brand-700">Relief Â· P{assigning.absence.period}</div>
-                        <div className="text-muted truncate">Covering {assigning.absence.teacher_name}</div>
-                      </div>
-                      <div className="rounded border border-line bg-subtle px-2 py-1 min-w-0">
-                        <div className="font-semibold uppercase tracking-wide text-dim">After Â· P{assigning.absence.period + 1}</div>
-                        <div className="text-muted truncate">
-                          {c.schedule_after
-                            ? `${c.schedule_after.subject || "â€”"}${c.schedule_after.class_name ? ` (${c.schedule_after.class_name})` : ""}`
-                            : "Free"}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              <div className="rounded border border-brand-300 bg-brand-50 px-2 py-1 min-w-0">
+                <div className="font-semibold uppercase tracking-wide text-brand-700">Relief · P{confirm.absence.period}</div>
+                <div className="text-muted truncate">Covering {confirm.absence.teacher_name}</div>
+              </div>
+              <div className="rounded border border-line bg-subtle px-2 py-1 min-w-0">
+                <div className="font-semibold uppercase tracking-wide text-dim">After · P{confirm.absence.period + 1}</div>
+                <div className="text-muted truncate">
+                  {confirm.candidate.schedule_after
+                    ? `${confirm.candidate.schedule_after.subject || "—"}${confirm.candidate.schedule_after.class_name ? ` (${confirm.candidate.schedule_after.class_name})` : ""}`
+                    : "Free"}
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-line px-4 py-3">
+              <div className="text-xs text-muted space-y-1">
+                <div>Department: <span className="text-fg">{confirm.candidate.department || "—"}</span></div>
+                <div>Subjects: <span className="text-fg">{confirm.candidate.subjects || "—"}</span></div>
+                <div>Cluster: <span className="text-fg">{confirm.candidate.cluster || "—"}</span></div>
+                <div>Room: <span className="text-fg">{confirm.candidate.room || "—"}</span></div>
+                <div>Workload this week: <span className="text-fg">{confirm.candidate.workload_this_week}</span></div>
+                <div>Total relief periods: <span className="text-fg">{confirm.candidate.total_relief_periods}</span></div>
               </div>
             </div>
 
@@ -259,28 +267,33 @@ export default function Relief() {
               {override && (
                 <div className="flex items-center gap-2">
                   <Select value={overrideTeacher} onChange={(e) => setOverrideTeacher(Number(e.target.value))} className="flex-1">
-                    <option value={0}>Select any teacherâ€¦</option>
+                    <option value={0}>Select any teacher...</option>
                     {(teachers?.teachers ?? [])
-                      .filter((t) => t.id !== assigning.absence.teacher_id)
+                      .filter((t) => t.id !== confirm.absence.teacher_id)
                       .map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}
-                        </option>
+                        <option key={t.id} value={t.id}>{t.name}</option>
                       ))}
                   </Select>
                   <Button
                     variant="secondary"
                     disabled={!overrideTeacher}
-                    onClick={() => void assign(assigning.absence.id, overrideTeacher, true)}
+                    onClick={() => void executeAssign(confirm.absence.id, overrideTeacher)}
                   >
                     Force assign
                   </Button>
                 </div>
               )}
             </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="secondary" onClick={() => setConfirm(null)}>Cancel</Button>
+              <Button disabled={assigning} onClick={() => void executeAssign(confirm.absence.id, confirm.candidate.teacher_id)}>
+                {assigning ? "Assigning..." : "Confirm assignment"}
+              </Button>
+            </div>
           </div>
-        )}
-      </Modal>
+        </Modal>
+      )}
     </div>
   );
 }

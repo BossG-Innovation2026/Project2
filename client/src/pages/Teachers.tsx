@@ -51,7 +51,7 @@ export default function Teachers() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-fg">Teachers</h1>
-          <p className="text-sm text-muted">{teachers.length} teachers Â· {active} active</p>
+          <p className="text-sm text-muted">{teachers.length} teachers · {active} active</p>
         </div>
         <Button onClick={() => setCreating(true)}>
           <Plus size={15} /> Add teacher
@@ -81,10 +81,10 @@ export default function Teachers() {
                   <div className="font-medium text-fg">{t.name}</div>
                   <div className="text-xs text-dim">{t.email}</div>
                 </td>
-                <td className="px-4 py-2.5 text-muted">{t.department || "â€”"}</td>
-                <td className="px-4 py-2.5 text-muted max-w-52 truncate">{t.subjects || "â€”"}</td>
-                <td className="px-4 py-2.5 text-muted">{t.cluster || "â€”"}</td>
-                <td className="px-4 py-2.5 text-muted">{t.room || "â€”"}</td>
+                <td className="px-4 py-2.5 text-muted">{t.department || "—"}</td>
+                <td className="px-4 py-2.5 text-muted max-w-52 truncate">{t.subjects || "—"}</td>
+                <td className="px-4 py-2.5 text-muted">{t.cluster || "—"}</td>
+                <td className="px-4 py-2.5 text-muted">{t.room || "—"}</td>
                 <td className="px-4 py-2.5 text-muted">{t.max_weekly_load}</td>
                 <td className="px-4 py-2.5">
                   <Badge className={t.active === 1 ? "bg-emerald-100 text-emerald-700" : "bg-hov text-muted"}>
@@ -103,7 +103,7 @@ export default function Teachers() {
             ))}
           </tbody>
         </table>
-        {teachers.length === 0 && <EmptyState message="No teachers yet â€” add the first one" />}
+        {teachers.length === 0 && <EmptyState message="No teachers yet — add the first one" />}
       </Card>
 
       {(creating || editing) && (
@@ -134,7 +134,8 @@ function TeacherModal({
   onSaved: () => void;
 }) {
   const isEdit = !!teacher?.id;
-  const { subjects: subjectOptions, departments: userDepartments } = useBrand();
+  const { subjects: subjectObjects, departments: userDepartments } = useBrand();
+  const subjectOptions = useMemo(() => subjectObjects.map((s) => s.name || s.code).filter(Boolean), [subjectObjects]);
   const departmentOptions =
     userDepartments.length > 0
       ? userDepartments
@@ -204,7 +205,7 @@ function TeacherModal({
           <div>
             <label className="block text-sm font-medium text-fg mb-1">Department</label>
             <Select value={form.department} onChange={(e) => set("department", e.target.value)}>
-              <option value="">â€”</option>
+              <option value="">—</option>
               {departmentOptions.map((d) => (
                 <option key={d}>{d}</option>
               ))}
@@ -259,7 +260,7 @@ function TeacherModal({
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={busy}>{busy ? "Savingâ€¦" : "Save"}</Button>
+          <Button type="submit" disabled={busy}>{busy ? "Saving..." : "Save"}</Button>
         </div>
       </form>
     </Modal>

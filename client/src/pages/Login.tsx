@@ -73,7 +73,7 @@ export default function Login() {
             <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
           </div>
           <Button type="submit" className="w-full" disabled={busy}>
-            {busy ? "Signing inâ€¦" : "Sign in"}
+            {busy ? "Signing in..." : "Sign in"}
           </Button>
         </form>
       </div>

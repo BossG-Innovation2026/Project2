@@ -72,9 +72,9 @@ export default function Requests() {
             <div>
               <div className="text-sm font-medium text-fg">{a.teacher_name}</div>
               <div className="text-xs text-muted">
-                {prettyDate(a.date)} Â· Period {a.period}
-                {a.reason ? ` Â· ${a.reason}` : ""}
-                {a.reviewed_at ? ` Â· reviewed ${a.reviewed_at.slice(0, 10)}` : ""}
+                {prettyDate(a.date)} · Period {a.period}
+                {a.reason ? ` · ${a.reason}` : ""}
+                {a.reviewed_at ? ` · reviewed ${a.reviewed_at.slice(0, 10)}` : ""}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -158,7 +158,7 @@ function NewRequestModal({
           <div>
             <label className="block text-sm font-medium text-fg mb-1">Teacher</label>
             <Select value={teacherId} onChange={(e) => setTeacherId(Number(e.target.value))} required>
-              <option value={0}>Select teacherâ€¦</option>
+              <option value={0}>Select teacher...</option>
               {teachers.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
@@ -183,7 +183,7 @@ function NewRequestModal({
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={busy}>{busy ? "Submittingâ€¦" : "Submit request"}</Button>
+          <Button type="submit" disabled={busy}>{busy ? "Submitting..." : "Submit request"}</Button>
         </div>
       </form>
     </Modal>

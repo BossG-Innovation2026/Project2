@@ -1,5 +1,5 @@
-name = "cshs-trace"
-account_id = "3ae62bfebe9b8d70c441e29f60b3fca4"
+name = "app"
+account_id = "c78fd40c4d7ce735c7d8969d6905fde0"
 main = "src/index.ts"
 compatibility_date = "2024-09-01"
 compatibility_flags = ["nodejs_compat"]
@@ -13,12 +13,12 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "trace"
-database_id = "1bc116fb-ea53-4403-a76f-8846c3a6b93e"
+database_id = "e9b94902-23ff-44a4-bd99-b57cb4185da1"
 migrations_dir = "migrations"
 
 [[kv_namespaces]]
 binding = "SESSIONS"
-id = "a4e62d4a5eb14f2eb2ba0ea80ece31e7"
+id = "a9111b5184d7436f90debfb9c3c92bcb"
 
 [triggers]
 crons = ["0 20 * * *"]

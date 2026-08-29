@@ -33,7 +33,7 @@ export default function History() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-fg">Reliever Assignment History</h1>
-          <p className="text-sm text-muted">Last 90 days Â· every assignment, response and override</p>
+          <p className="text-sm text-muted">Last 90 days · every assignment, response and override</p>
         </div>
         <div className="flex items-center gap-2">
           <Select value={teacherFilter} onChange={(e) => setTeacherFilter(Number(e.target.value))} className="w-48">
@@ -76,9 +76,9 @@ export default function History() {
                 <td className="px-4 py-2.5 font-medium text-fg">{r.reliever_name}</td>
                 <td className="px-4 py-2.5 text-muted">{r.absent_teacher_name}</td>
                 <td className="px-4 py-2.5 text-muted">{r.period}</td>
-                <td className="px-4 py-2.5 text-muted">{r.class_name || r.subject || "â€”"}</td>
+                <td className="px-4 py-2.5 text-muted">{r.class_name || r.subject || "—"}</td>
                 <td className="px-4 py-2.5"><Badge className={RELIEF_STATUS_STYLE[r.status]}>{r.status}</Badge></td>
-                <td className="px-4 py-2.5 text-muted">{r.is_override === 1 ? "Yes" : "â€”"}</td>
+                <td className="px-4 py-2.5 text-muted">{r.is_override === 1 ? "Yes" : "—"}</td>
               </tr>
             ))}
           </tbody>

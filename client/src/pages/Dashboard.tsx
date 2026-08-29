@@ -10,12 +10,11 @@ import Reports from "./Reports";
 import HistoryPage from "./History";
 import NotificationsPage from "./Notifications";
 import { ErrorBoundary } from "../components/ErrorBoundary";
-import { CalendarDays, ClipboardList, LifeBuoy, CheckCircle2, XCircle, LayoutDashboard, BarChart3, History as HistoryIcon, Bell } from "lucide-react";
+import { CalendarDays, ClipboardList, LifeBuoy, CheckCircle2, XCircle, LayoutDashboard, BarChart3, History as HistoryIcon, Bell, X } from "lucide-react";
 
 const PANEL_TABS = [
   { key: "overview", label: "Overview", icon: LayoutDashboard },
   { key: "calendar", label: "Calendar", icon: CalendarDays },
-  { key: "reports", label: "Reports", icon: BarChart3 },
   { key: "history", label: "Reliever History", icon: HistoryIcon },
   { key: "notifications", label: "Notifications", icon: Bell },
 ];
@@ -57,6 +56,14 @@ export default function Dashboard() {
   const rawTab = searchParams.get("tab") ?? "overview";
   const tab: string = TAB_KEYS.includes(rawTab) ? rawTab : "overview";
   const [unread, setUnread] = useState(0);
+  const [reportsOpen, setReportsOpen] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("tab") === "reports") {
+      setReportsOpen(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     let alive = true;
@@ -77,6 +84,10 @@ export default function Dashboard() {
   }, []);
 
   function switchTab(next: string) {
+    if (next === "reports") {
+      setReportsOpen(true);
+      return;
+    }
     setSearchParams(next === "overview" ? {} : { tab: next }, { replace: true });
   }
 
@@ -102,7 +113,7 @@ export default function Dashboard() {
     setFileMsg(null);
     try {
       await api("/api/absences", { method: "POST", body: JSON.stringify(fileForm) });
-      setFileMsg("Leave request submitted â€” pending admin approval.");
+      setFileMsg("Leave request submitted — pending admin approval.");
       setFileForm({ date: todayISO(), period: 1, reason: "" });
       setRefreshKey((k) => k + 1);
     } catch (err) {
@@ -157,7 +168,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader
             title="Upcoming leaves"
-            subtitle={`${prettyDate(s.today)} â€” 7 days ahead`}
+            subtitle={`${prettyDate(s.today)} — 7 days ahead`}
             actions={
               isAdmin ? (
                 <Link to="/requests" className="text-xs text-brand-600 font-medium hover:underline flex items-center gap-1">
@@ -172,7 +183,7 @@ export default function Dashboard() {
               <div key={a.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-slate-50 border-b border-slate-50 last:border-0">
                 <div>
                   <div className="text-sm font-medium text-fg">{a.teacher_name}</div>
-                  <div className="text-xs text-muted">{prettyDate(a.date)} Â· Period {a.period}{a.reason ? ` Â· ${a.reason}` : ""}</div>
+                  <div className="text-xs text-muted">{prettyDate(a.date)} · Period {a.period}{a.reason ? ` · ${a.reason}` : ""}</div>
                 </div>
                 <Badge className={a.assigned_count > 0 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}>
                   {a.assigned_count > 0 ? "Covered" : "Needs reliever"}
@@ -199,7 +210,7 @@ export default function Dashboard() {
                 <div key={r.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-slate-50 border-b border-slate-50 last:border-0">
                   <div>
                     <div className="text-sm font-medium text-fg">Cover for {r.absent_teacher_name}</div>
-                    <div className="text-xs text-muted">{prettyDate(r.date)} Â· Period {r.period} Â· {r.class_name || r.subject || "â€”"}</div>
+                    <div className="text-xs text-muted">{prettyDate(r.date)} · Period {r.period} · {r.class_name || r.subject || "—"}</div>
                   </div>
                   <Badge className={RELIEF_STATUS_STYLE[r.status]}>{r.status}</Badge>
                 </div>
@@ -221,7 +232,7 @@ export default function Dashboard() {
                   <div key={r.id} className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg hover:bg-slate-50 border-b border-slate-50 last:border-0">
                     <div className="min-w-0">
                       <div className="text-sm font-medium text-fg">Cover for {r.absent_teacher_name}</div>
-                      <div className="text-xs text-muted">{prettyDate(r.date)} Â· Period {r.period} Â· {r.class_name || r.subject || "â€”"}</div>
+                      <div className="text-xs text-muted">{prettyDate(r.date)} · Period {r.period} · {r.class_name || r.subject || "—"}</div>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <Badge className={RELIEF_STATUS_STYLE[r.status]}>{r.status}</Badge>
@@ -270,7 +281,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="flex justify-end">
-                <Button type="submit" disabled={fileBusy}>{fileBusy ? "Submittingâ€¦" : "Submit request"}</Button>
+                <Button type="submit" disabled={fileBusy}>{fileBusy ? "Submitting..." : "Submit request"}</Button>
               </div>
             </form>
           </Card>
@@ -298,10 +309,6 @@ export default function Dashboard() {
               <div className="text-xs text-dim mt-1">Log a leave request</div>
             </a>
           )}
-          <Link to="/availability" className="rounded-xl border border-line p-4 hover:border-brand-400 hover:shadow-sm transition-colors">
-            <div className="font-medium text-sm text-fg">Set availability</div>
-            <div className="text-xs text-dim mt-1">Mark periods available/unavailable</div>
-          </Link>
           <button type="button" onClick={() => switchTab("reports")} className="text-left rounded-xl border border-line p-4 hover:border-brand-400 hover:shadow-sm transition-colors">
             <div className="font-medium text-sm text-fg">Reports</div>
             <div className="text-xs text-dim mt-1">Workload, coverage & analytics</div>
@@ -312,10 +319,30 @@ export default function Dashboard() {
             </ErrorBoundary>
           )}
           {tab === "calendar" && <ErrorBoundary label="Calendar"><Calendar /></ErrorBoundary>}
-          {tab === "reports" && <ErrorBoundary label="Reports"><Reports /></ErrorBoundary>}
           {tab === "history" && <ErrorBoundary label="Reliever History"><HistoryPage /></ErrorBoundary>}
           {tab === "notifications" && <ErrorBoundary label="Notifications"><NotificationsPage /></ErrorBoundary>}
       </div>
+
+      {reportsOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setReportsOpen(false)} />
+          <div className="relative w-full max-w-5xl bg-canvas border-l border-line overflow-y-auto shadow-2xl animate-slide-in-right">
+            <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-3 bg-canvas border-b border-line">
+              <h2 className="text-lg font-bold text-fg">Reports & Analytics</h2>
+              <button
+                type="button"
+                onClick={() => setReportsOpen(false)}
+                className="p-1.5 rounded-lg text-muted hover:text-fg hover:bg-hov transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-5">
+              <Reports />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -44,8 +44,9 @@ export function generateTimetable(opts: {
   curriculum: Record<string, Record<string, number>>;
   teachers: Teacher[];
   periodCount: number;
+  teacherOverrides?: Record<string, number>;
 }): GenerateResult {
-  const { classes, clusters, curriculum, teachers, periodCount } = opts;
+  const { classes, clusters, curriculum, teachers, periodCount, teacherOverrides } = opts;
   const active = teachers.filter((t) => t.active === 1);
 
   const specialistPool = new Map<string, Teacher[]>();
@@ -90,6 +91,16 @@ export function generateTimetable(opts: {
     // Bind one teacher per (cluster, subject).
     const bound = new Map<string, Teacher>(); // subject(lowercased) -> teacher
     for (const [subject, perClass] of demand) {
+      const overriderId = teacherOverrides?.[subject];
+      if (overriderId && overriderId > 0) {
+        const chosen = active.find((t) => t.id === overriderId);
+        if (chosen) {
+          const total = [...perClass.values()].reduce((a, b) => a + b, 0);
+          teacherLoad.set(chosen.id, (teacherLoad.get(chosen.id) ?? 0) + total);
+          bound.set(subject.toLowerCase(), chosen);
+          continue;
+        }
+      }
       const eligible = specialistsOf(subject);
       if (eligible.length === 0) {
         for (const [cls, n] of perClass) {

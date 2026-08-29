@@ -6,10 +6,8 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Requests from "./pages/Requests";
 import Relief from "./pages/Relief";
-import Teachers from "./pages/Teachers";
 import Schedules from "./pages/Schedules";
 import Generator from "./pages/Generator";
-import Availability from "./pages/Availability";
 import Settings from "./pages/Settings";
 
 function Protected({ children }: { children: React.ReactNode }) {
@@ -43,11 +41,10 @@ export default function App() {
           <Route path="calendar" element={<Navigate to="/?tab=calendar" replace />} />
           <Route path="requests" element={<AdminOnly><Requests /></AdminOnly>} />
           <Route path="relief" element={<AdminOnly><Relief /></AdminOnly>} />
-          <Route path="teachers" element={<AdminOnly><Teachers /></AdminOnly>} />
           <Route path="schedules" element={<AdminOnly><Schedules /></AdminOnly>} />
           <Route path="generator" element={<AdminOnly><Generator /></AdminOnly>} />
-          <Route path="availability" element={<Availability />} />
           <Route path="reports" element={<Navigate to="/?tab=reports" replace />} />
+          <Route path="file-leave" element={<Navigate to="/?panel=leave" replace />} />
           <Route path="history" element={<Navigate to="/?tab=history" replace />} />
           <Route path="notifications" element={<Navigate to="/?tab=notifications" replace />} />
           <Route path="settings" element={<AdminOnly><Settings /></AdminOnly>} />

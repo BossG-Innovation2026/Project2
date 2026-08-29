@@ -3,7 +3,7 @@ import { api, type ScheduleRow, type Teacher } from "../api";
 import { usePolling } from "../hooks/usePolling";
 import { useBrand } from "../context/BrandContext";
 import { Card, CardHeader, Button, Input, Modal, Select, Spinner, EmptyState, Flash } from "../components/ui";
-import { SCHOOL_DAYS } from "../lib/format";
+import { SCHOOL_DAYS, WEEKDAYS } from "../lib/format";
 import { Trash2, Plus, Lock, LockOpen } from "lucide-react";
 
 interface ScheduleData {
@@ -20,7 +20,6 @@ export default function Schedules() {
   const [error, setError] = useState<string | null>(null);
   const [slot, setSlot] = useState<{ weekday: number; period: number; existing: ScheduleRow | null } | null>(null);
   const [freeModal, setFreeModal] = useState(false);
-  const [pwDialog, setPwDialog] = useState<null | { purpose: "unlock" | "delete"; scheduleId?: number }>(null);
   const { classes: configuredClasses } = useBrand();
 
   const { data } = usePolling<ScheduleData>(
@@ -34,7 +33,7 @@ export default function Schedules() {
   const { data: teachers } = usePolling<{ teachers: Teacher[] }>(() => api("/api/teachers"), 60000);
 
   const classOptions = useMemo(
-    () => [...new Set(configuredClasses)].sort((a, b) => a.localeCompare(b)),
+    () => [...new Set(configuredClasses.map((c) => c.name).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
     [configuredClasses]
   );
 
@@ -61,19 +60,12 @@ export default function Schedules() {
   }, [data, classFilter]);
 
   function handleCellClick(wd: number, p: number, existing: ScheduleRow | null) {
-    if (locked) {
-      setPwDialog({ purpose: "unlock" });
-      return;
-    }
+    if (locked) return;
     setSlot({ weekday: wd, period: p, existing });
   }
 
   function requestDelete(id: number) {
-    if (locked) {
-      setPwDialog({ purpose: "unlock" });
-      return;
-    }
-    setPwDialog({ purpose: "delete", scheduleId: id });
+    deleteEntry(id);
   }
 
   async function deleteEntry(id: number) {
@@ -97,7 +89,7 @@ export default function Schedules() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-fg">Class Schedules</h1>
-          <p className="text-sm text-muted">Weekly recurring classes â€” used for conflict detection</p>
+          <p className="text-sm text-muted">Weekly recurring classes — used for conflict detection</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="inline-flex rounded-lg border border-line bg-surface p-0.5">
@@ -124,7 +116,7 @@ export default function Schedules() {
             <>
               <button
                 type="button"
-                onClick={() => (locked ? setPwDialog({ purpose: "unlock" }) : setLocked(true))}
+                onClick={() => setLocked((v) => !v)}
                 className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                   locked
                     ? "border-line bg-surface text-muted hover:text-fg"
@@ -161,16 +153,16 @@ export default function Schedules() {
       {viewMode === "class" &&
         (classOptions.length === 0 ? (
           <Card>
-            <EmptyState message="No classes yet â€” define classes in Settings first." />
+            <EmptyState message="No classes yet — define classes in Settings first." />
           </Card>
         ) : (
           <Card>
             <CardHeader
-              title={`${classFilter} Â· weekly timetable`}
+              title={`${classFilter} · weekly timetable`}
               subtitle={
                 locked
-                  ? "Locked â€” click any slot to unlock with your password"
-                  : `Periods 1â€“${data.period_count} Â· click a slot to assign or edit`
+                  ? "Locked — click Unlock to edit the timetable"
+                  : `Periods 1\u2013${data.period_count} · click a slot to assign or edit`
               }
             />
             <div className="p-5 overflow-x-auto">
@@ -195,7 +187,7 @@ export default function Schedules() {
                               locked ? (
                                 <div className="rounded-lg border border-line bg-subtle/60 px-2.5 py-1.5">
                                   <div className="text-xs font-semibold text-fg truncate">{cell.teacher_name}</div>
-                                  <div className="text-[11px] text-dim truncate">{cell.subject || "â€”"}</div>
+                                  <div className="text-[11px] text-dim truncate">{cell.subject || "—"}</div>
                                 </div>
                               ) : (
                                 <div
@@ -203,7 +195,7 @@ export default function Schedules() {
                                   onClick={() => handleCellClick(wd, p, cell)}
                                 >
                                   <div className="text-xs font-semibold text-fg pr-4 truncate">{cell.teacher_name}</div>
-                                  <div className="text-[11px] text-dim truncate">{cell.subject || "â€”"}</div>
+                                  <div className="text-[11px] text-dim truncate">{cell.subject || "—"}</div>
                                   <button
                                     type="button"
                                     onClick={(e) => {
@@ -218,7 +210,7 @@ export default function Schedules() {
                                 </div>
                               )
                             ) : locked ? (
-                              <div className="rounded-lg border border-dashed border-line px-2.5 py-1.5 text-[11px] text-dim">â€”</div>
+                              <div className="rounded-lg border border-dashed border-line px-2.5 py-1.5 text-[11px] text-dim">—</div>
                             ) : (
                               <button
                                 type="button"
@@ -252,9 +244,9 @@ export default function Schedules() {
                     <div key={r.id} className="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-slate-50 group">
                       <div>
                         <div className="text-xs font-medium text-fg">
-                          P{r.period} Â· {r.subject || "â€”"}
+                          P{r.period} · {r.subject || "—"}
                         </div>
-                        <div className="text-[11px] text-dim">{r.teacher_name}{r.class_name ? ` Â· ${r.class_name}` : ""}</div>
+                        <div className="text-[11px] text-dim">{r.teacher_name}{r.class_name ? ` · ${r.class_name}` : ""}</div>
                       </div>
                       <button
                         onClick={() => void removeTeacherEntry(r.id)}
@@ -302,26 +294,6 @@ export default function Schedules() {
           }}
         />
       )}
-
-      {pwDialog && (
-        <PasswordModal
-          title={pwDialog.purpose === "unlock" ? "Unlock timetable" : "Confirm deletion"}
-          subtitle={
-            pwDialog.purpose === "unlock"
-              ? "Enter your admin password to make the timetable editable."
-              : "Enter your admin password to delete this schedule entry."
-          }
-          onClose={() => setPwDialog(null)}
-          onVerified={() => {
-            if (pwDialog.purpose === "unlock") {
-              setLocked(false);
-            } else if (pwDialog.scheduleId != null) {
-              void deleteEntry(pwDialog.scheduleId);
-            }
-            setPwDialog(null);
-          }}
-        />
-      )}
     </div>
   );
 }
@@ -352,11 +324,14 @@ function SlotModal({
   const [className, setClassName] = useState(fixedClass || "");
   const [teacherId, setTeacherId] = useState<number>(existing?.teacher_id ?? 0);
   const [subject, setSubject] = useState(existing?.subject ?? "");
-  const [askPw, setAskPw] = useState(false);
-  const [removeAskPw, setRemoveAskPw] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const { subjects: subjectOptions, classes: classOptions } = useBrand();
+  const { subjects: subjectObjects, classes: configuredClasses } = useBrand();
+  const classOptions = useMemo(
+    () => [...new Set(configuredClasses.map((c) => c.name).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    [configuredClasses]
+  );
+  const subjectOptions = useMemo(() => subjectObjects.map((s) => s.name || s.code).filter(Boolean), [subjectObjects]);
 
   const activeTeachers = useMemo(() => teachers.filter((t) => !!t.active), [teachers]);
 
@@ -384,8 +359,7 @@ function SlotModal({
 
   function submit(e: FormEvent) {
     e.preventDefault();
-    setError(null);
-    setAskPw(true);
+    void doSave();
   }
 
   async function doSave() {
@@ -454,7 +428,7 @@ function SlotModal({
                 <label className="block text-sm font-medium text-fg mb-1">Class</label>
                 {classOptions.length > 0 ? (
                   <Select value={className} onChange={(e) => setClassName(e.target.value)}>
-                    <option value="">Select classâ€¦</option>
+                    <option value="">Select class...</option>
                     {classOptions.map((c) => (
                       <option key={c} value={c}>{c}</option>
                     ))}
@@ -467,11 +441,11 @@ function SlotModal({
           ) : (
             <div className="flex flex-wrap items-center gap-2 rounded-lg bg-subtle border border-line px-3 py-2 text-sm text-muted">
               <span className="font-medium text-fg">{WEEKDAYS[weekday]}</span>
-              <span className="text-dim">Â·</span>
+              <span className="text-dim">·</span>
               <span>Period {period}</span>
               {contextClass && (
                 <>
-                  <span className="text-dim">Â·</span>
+                  <span className="text-dim">·</span>
                   <span className="font-medium text-fg">{contextClass}</span>
                 </>
               )}
@@ -481,14 +455,14 @@ function SlotModal({
             <label className="block text-sm font-medium text-fg mb-1">Teacher</label>
             <Select value={teacherId} onChange={(e) => setTeacherId(Number(e.target.value))} required>
               <option value={0}>
-                {teacherOptions.length > 0 ? "Select teacherâ€¦" : "No teachers available"}
+                {teacherOptions.length > 0 ? "Select teacher..." : "No teachers available"}
               </option>
               {teacherOptions.map((t) => (
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
             </Select>
             <p className="mt-1 text-xs text-dim">
-              {teacherOptions.length} of {activeTeachers.length} teachers available â€” those already teaching at this
+              {teacherOptions.length} of {activeTeachers.length} teachers available — those already teaching at this
               time or at their weekly load cap are hidden.
             </p>
           </div>
@@ -496,7 +470,7 @@ function SlotModal({
             <label className="block text-sm font-medium text-fg mb-1">Subject</label>
             {subjectOptions.length > 0 ? (
               <Select value={subject} onChange={(e) => setSubject(e.target.value)}>
-                <option value="">Select subjectâ€¦</option>
+                <option value="">Select subject...</option>
                 {subjectOptions.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
@@ -509,7 +483,7 @@ function SlotModal({
             {isEdit ? (
               <button
                 type="button"
-                onClick={() => setRemoveAskPw(true)}
+                onClick={() => void doRemove()}
                 disabled={busy}
                 className="rounded-lg border border-rose-200 bg-surface px-3 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 transition-colors"
               >
@@ -521,87 +495,12 @@ function SlotModal({
             <div className="flex gap-2">
               <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
               <Button type="submit" disabled={busy || !teacherId || teacherOptions.length === 0}>
-                {busy ? "Savingâ€¦" : isEdit ? "Save changes" : "Assign"}
+                {busy ? "Saving..." : isEdit ? "Save changes" : "Assign"}
               </Button>
             </div>
           </div>
         </form>
       </Modal>
-
-      {askPw && (
-        <PasswordModal
-          title="Confirm save"
-          subtitle="Enter your admin password to save this change."
-          onClose={() => setAskPw(false)}
-          onVerified={() => {
-            setAskPw(false);
-            void doSave();
-          }}
-        />
-      )}
-
-      {removeAskPw && (
-        <PasswordModal
-          title="Confirm removal"
-          subtitle="Enter your admin password to remove this schedule entry."
-          onClose={() => setRemoveAskPw(false)}
-          onVerified={() => {
-            setRemoveAskPw(false);
-            void doRemove();
-          }}
-        />
-      )}
     </>
-  );
-}
-
-function PasswordModal({
-  title,
-  subtitle,
-  onClose,
-  onVerified,
-}: {
-  title: string;
-  subtitle?: string;
-  onClose: () => void;
-  onVerified: () => void;
-}) {
-  const [pw, setPw] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    if (!pw) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await api("/api/auth/verify", { method: "POST", body: JSON.stringify({ password: pw }) });
-      onVerified();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Verification failed");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Modal open onClose={onClose} title={title}>
-      <form onSubmit={submit} className="space-y-4">
-        {subtitle && <p className="text-sm text-muted">{subtitle}</p>}
-        <Flash error={error} />
-        <Input
-          type="password"
-          value={pw}
-          onChange={(e) => setPw(e.target.value)}
-          placeholder="Your password"
-          autoFocus
-        />
-        <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={busy || !pw}>{busy ? "Verifyingâ€¦" : "Confirm"}</Button>
-        </div>
-      </form>
-    </Modal>
   );
 }

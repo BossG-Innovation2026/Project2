@@ -57,11 +57,11 @@ export default function Reports() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-fg">Reports & Analytics</h1>
-          <p className="text-sm text-muted">Week of {prettyDate(weekStart)} â€” {prettyDate(weekEnd)}</p>
+          <p className="text-sm text-muted">Week of {prettyDate(weekStart)} — {prettyDate(weekEnd)}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={() => setWeekDate(addDaysISO(weekDate, -7))}>â€¹ Prev</Button>
-          <Button variant="secondary" size="sm" onClick={() => setWeekDate(addDaysISO(weekDate, 7))}>Next â€º</Button>
+          <Button variant="secondary" size="sm" onClick={() => setWeekDate(addDaysISO(weekDate, -7))}>‹ Prev</Button>
+          <Button variant="secondary" size="sm" onClick={() => setWeekDate(addDaysISO(weekDate, 7))}>Next ›</Button>
           <Select value={weekDate} onChange={(e) => setWeekDate(e.target.value)} className="w-44">
             {Array.from({ length: 12 }, (_, i) => addDaysISO(todayISO(), (i - 6) * 7)).map((d) => (
               <option key={d} value={d}>{prettyDate(startOfWeekISO(d))}</option>
@@ -77,13 +77,13 @@ export default function Reports() {
         </div>
       </div>
 
-      {errors.length > 0 && <Flash error={errors.join(" Â· ")} />}
+      {errors.length > 0 && <Flash error={errors.join(" · ")} />}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Stat label="Leaves (week)" value={coverage ? coverage.total_absences : "â€”"} />
-        <Stat label="Assignments (week)" value={coverage ? coverage.total_assigned : "â€”"} />
-        <Stat label="Coverage rate" value={coverage ? `${coverage.coverage_rate}%` : "â€”"} />
-        <Stat label="Teachers" value={workload ? workload.workload.length : "â€”"} />
+        <Stat label="Leaves (week)" value={coverage ? coverage.total_absences : "—"} />
+        <Stat label="Assignments (week)" value={coverage ? coverage.total_assigned : "—"} />
+        <Stat label="Coverage rate" value={coverage ? `${coverage.coverage_rate}%` : "—"} />
+        <Stat label="Teachers" value={workload ? workload.workload.length : "—"} />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
@@ -134,7 +134,7 @@ export default function Reports() {
           <div className="p-4 h-64">
             {reasonsError ? (
               <div className="h-full flex items-center justify-center text-sm text-rose-600">
-                Failed to load â€” retrying automaticallyâ€¦
+                Failed to load — retrying automatically...
               </div>
             ) : !reasons ? (
               <div className="h-full flex items-center justify-center">
@@ -180,7 +180,7 @@ export default function Reports() {
                   {workload.workload.map((w) => (
                     <tr key={w.teacher_id} className="border-t border-line">
                       <td className="px-4 py-2 font-medium text-fg">{w.name}</td>
-                      <td className="px-4 py-2 text-muted">{w.department || "â€”"}</td>
+                      <td className="px-4 py-2 text-muted">{w.department || "—"}</td>
                       <td className="px-4 py-2 text-center">{w.scheduled_periods}</td>
                       <td className="px-4 py-2 text-center">{w.relief_this_week}</td>
                       <td className="px-4 py-2 text-center font-medium">{w.total_current}</td>
@@ -214,7 +214,7 @@ function SectionState({ loading, error }: { loading: boolean; error: string | nu
   if (error)
     return (
       <div className="h-full min-h-[8rem] flex items-center justify-center text-sm text-rose-600">
-        Failed to load â€” retrying automaticallyâ€¦
+        Failed to load — retrying automatically...
       </div>
     );
   return null;

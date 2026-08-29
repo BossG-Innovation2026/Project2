@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -6,9 +7,10 @@ import {
   Users,
   CalendarRange,
   Wand2,
-  Clock3,
   Settings,
   LogOut,
+  BarChart3,
+  FileDown,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { assetUrl, useBrand } from "../context/BrandContext";
@@ -17,18 +19,24 @@ import { ThemeToggle } from "./ThemeToggle";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, adminOnly: false },
+  { to: "/reports", label: "Reports", icon: BarChart3, adminOnly: false },
+  { to: "/file-leave", label: "File a leave", icon: FileDown, adminOnly: false },
   { to: "/requests", label: "Leave Requests", icon: ClipboardList, adminOnly: true },
   { to: "/relief", label: "Reliever Finder", icon: LifeBuoy, adminOnly: true },
-  { to: "/teachers", label: "Teachers", icon: Users, adminOnly: true },
   { to: "/schedules", label: "Class Schedules", icon: CalendarRange, adminOnly: true },
   { to: "/generator", label: "Schedule Generator", icon: Wand2, adminOnly: true },
-  { to: "/availability", label: "Availability", icon: Clock3, adminOnly: false },
 ];
 
 export default function Layout() {
   const { user, logout } = useAuth();
   const { systemName, tagline, hasLogo, assetsVersion } = useBrand();
   const navigate = useNavigate();
+  const [time, setTime] = useState(() => new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false }));
+
+  useEffect(() => {
+    const id = setInterval(() => setTime(new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false })), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   if (!user) return null;
 
@@ -72,6 +80,7 @@ export default function Layout() {
         <div className="px-4 py-4 border-t border-slate-800">
           <div className="text-sm text-white font-medium truncate">{user.name}</div>
           <div className="text-[11px] text-slate-400 capitalize">{user.role}</div>
+          <div className="text-[11px] text-slate-500 mt-1">{time}</div>
           <div className="flex gap-2 mt-3">
             {user.role === "admin" && (
               <Button variant="ghost" size="sm" className="text-slate-300 hover:bg-slate-800" onClick={() => navigate("/settings")}>
