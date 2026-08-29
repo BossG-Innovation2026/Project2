@@ -128,7 +128,7 @@ function SubjectTableEditor({
 }: {
   subjects: Subject[];
   onSubjectsChange: (subjects: Subject[]) => void;
-  onSave: () => Promise<void>;
+  onSave: (list?: Subject[]) => Promise<void>;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -141,7 +141,7 @@ function SubjectTableEditor({
     onSubjectsChange(next);
     setSaved(false);
     try {
-      await onSave();
+      await onSave(next);
       setSaved(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
@@ -195,6 +195,8 @@ function SubjectTableEditor({
       {(creating || editing) && (
         <SubjectEditModal
           subject={editing?.subject ?? null}
+          subjects={subjects}
+          editingIndex={editing?.index ?? null}
           onClose={() => { setCreating(false); setEditing(null); }}
           onSaved={(s) => {
             setCreating(false);
@@ -217,14 +219,18 @@ function SubjectTableEditor({
 
 function SubjectEditModal({
   subject,
+  subjects,
+  editingIndex,
   onClose,
   onSaved,
   onSave,
 }: {
   subject: Subject | null;
+  subjects: Subject[];
+  editingIndex: number | null;
   onClose: () => void;
   onSaved: (s: Subject) => void;
-  onSave: () => Promise<void>;
+  onSave: (list?: Subject[]) => Promise<void>;
 }) {
   const isEdit = subject !== null;
   const [form, setForm] = useState<Subject>(subject ?? { code: "", name: "", description: "" });
@@ -233,11 +239,25 @@ function SubjectEditModal({
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    const code = form.code.trim();
+    const name = form.name.trim();
+    if (!code && !name) {
+      setError("Subject code or name is required.");
+      return;
+    }
+    const final = { ...form, code, name };
     setBusy(true);
     setError(null);
     try {
-      await onSave();
-      onSaved(form);
+      let next: Subject[];
+      if (isEdit && editingIndex !== null) {
+        next = [...subjects];
+        next[editingIndex] = final;
+      } else {
+        next = [...subjects, final];
+      }
+      await onSave(next);
+      onSaved(final);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally {
@@ -730,9 +750,10 @@ export default function Settings() {
     });
   }, []);
 
-  async function saveSubjects() {
-    await api("/api/settings", { method: "PUT", body: JSON.stringify({ subjects: subjectList }) });
-    setSubjects(subjectList);
+  async function saveSubjects(list?: Subject[]) {
+    const toSave = list ?? subjectList;
+    await api("/api/settings", { method: "PUT", body: JSON.stringify({ subjects: toSave }) });
+    setSubjects(toSave);
   }
 
   async function saveDepartments() {
