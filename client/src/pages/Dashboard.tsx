@@ -401,8 +401,8 @@ export default function Dashboard() {
       </div>
 
       {reportsOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="relative w-full max-w-5xl bg-canvas border-l border-line overflow-y-auto shadow-2xl">
+        <div className="fixed inset-0 z-50 flex justify-end" onClick={() => setReportsOpen(false)}>
+          <div className="relative w-full max-w-5xl bg-canvas border-l border-line overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-3 bg-canvas border-b border-line">
               <h2 className="text-lg font-bold text-fg">Reports & Analytics</h2>
               <button
