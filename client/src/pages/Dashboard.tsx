@@ -10,14 +10,13 @@ import Reports from "./Reports";
 import HistoryPage from "./History";
 import NotificationsPage from "./Notifications";
 import { ErrorBoundary } from "../components/ErrorBoundary";
-import { CalendarDays, ClipboardList, LifeBuoy, CheckCircle2, XCircle, LayoutDashboard, BarChart3, History as HistoryIcon, Bell, X, FileDown } from "lucide-react";
+import { CalendarDays, ClipboardList, LifeBuoy, CheckCircle2, XCircle, LayoutDashboard, BarChart3, History as HistoryIcon, Bell, X } from "lucide-react";
 
 const PANEL_TABS = [
   { key: "overview", label: "Overview", icon: LayoutDashboard },
   { key: "calendar", label: "Calendar", icon: CalendarDays },
   { key: "history", label: "Reliever History", icon: HistoryIcon },
   { key: "notifications", label: "Notifications", icon: Bell },
-  { key: "file-leave", label: "File a Leave", icon: FileDown },
 ];
 
 const TAB_KEYS = PANEL_TABS.map((t) => t.key);
@@ -403,7 +402,6 @@ export default function Dashboard() {
 
       {reportsOpen && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setReportsOpen(false)} />
           <div className="relative w-full max-w-5xl bg-canvas border-l border-line overflow-y-auto shadow-2xl">
             <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-3 bg-canvas border-b border-line">
               <h2 className="text-lg font-bold text-fg">Reports & Analytics</h2>
