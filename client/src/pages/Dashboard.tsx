@@ -6,11 +6,10 @@ import { Card, CardHeader, Stat, Spinner, EmptyState, Badge, Button, Flash } fro
 import { prettyDate, RELIEF_STATUS_STYLE, ABSENCE_STATUS_STYLE } from "../lib/format";
 import { useAuth } from "../context/AuthContext";
 import Calendar from "./Calendar";
-import Reports from "./Reports";
 import HistoryPage from "./History";
 import NotificationsPage from "./Notifications";
 import { ErrorBoundary } from "../components/ErrorBoundary";
-import { CalendarDays, ClipboardList, LifeBuoy, CheckCircle2, XCircle, LayoutDashboard, BarChart3, History as HistoryIcon, Bell, X } from "lucide-react";
+import { CalendarDays, ClipboardList, LifeBuoy, CheckCircle2, XCircle, LayoutDashboard, History as HistoryIcon, Bell } from "lucide-react";
 
 const PANEL_TABS = [
   { key: "overview", label: "Overview", icon: LayoutDashboard },
@@ -54,14 +53,6 @@ export default function Dashboard() {
   const rawTab = searchParams.get("tab") ?? "overview";
   const tab: string = TAB_KEYS.includes(rawTab) ? rawTab : "overview";
   const [unread, setUnread] = useState(0);
-  const [reportsOpen, setReportsOpen] = useState(false);
-
-  useEffect(() => {
-    if (searchParams.get("tab") === "reports") {
-      setReportsOpen(true);
-      setSearchParams({}, { replace: true });
-    }
-  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     let alive = true;
@@ -82,10 +73,6 @@ export default function Dashboard() {
   }, []);
 
   function switchTab(next: string) {
-    if (next === "reports") {
-      setReportsOpen(true);
-      return;
-    }
     setSearchParams(next === "overview" ? {} : { tab: next }, { replace: true });
   }
 
@@ -287,26 +274,6 @@ export default function Dashboard() {
           {tab === "history" && <ErrorBoundary label="Reliever History"><HistoryPage /></ErrorBoundary>}
           {tab === "notifications" && <ErrorBoundary label="Notifications"><NotificationsPage /></ErrorBoundary>}
       </div>
-
-      {reportsOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end" onClick={() => setReportsOpen(false)}>
-          <div className="relative w-full max-w-5xl bg-canvas border-l border-line overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-3 bg-canvas border-b border-line">
-              <h2 className="text-lg font-bold text-fg">Reports & Analytics</h2>
-              <button
-                type="button"
-                onClick={() => setReportsOpen(false)}
-                className="p-1.5 rounded-lg text-muted hover:text-fg hover:bg-hov transition-colors"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div className="p-5">
-              <Reports />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

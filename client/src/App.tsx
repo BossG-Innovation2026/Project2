@@ -11,6 +11,7 @@ import Generator from "./pages/Generator";
 import Settings from "./pages/Settings";
 import AvailabilityCalendar from "./pages/AvailabilityCalendar";
 import FileLeave from "./pages/FileLeave";
+import Reports from "./pages/Reports";
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -45,7 +46,7 @@ export default function App() {
           <Route path="relief" element={<AdminOnly><Relief /></AdminOnly>} />
           <Route path="schedules" element={<AdminOnly><Schedules /></AdminOnly>} />
           <Route path="generator" element={<AdminOnly><Generator /></AdminOnly>} />
-          <Route path="reports" element={<Navigate to="/?tab=reports" replace />} />
+          <Route path="reports" element={<Reports />} />
           <Route path="file-leave" element={<FileLeave />} />
           <Route path="availability" element={<AvailabilityCalendar />} />
           <Route path="history" element={<Navigate to="/?tab=history" replace />} />
