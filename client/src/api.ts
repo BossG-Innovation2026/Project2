@@ -148,3 +148,33 @@ export interface WorkloadRow {
   total_current: number;
   utilization: number;
 }
+
+export interface MySummary {
+  leaves_this_week: number;
+  leaves_all_time: number;
+  leaves_pending: number;
+  relief_this_week: number;
+  relief_all_time: number;
+  scheduled_periods: number;
+  max_weekly_load: number;
+  total_load: number;
+  utilization: number;
+}
+
+export interface MonthlyLeaves {
+  months: { month: string; label: string; n: number }[];
+}
+
+export interface ReliefBySubject {
+  subjects: { subject: string; n: number }[];
+}
+
+export interface MyWorkload {
+  department: string;
+  subjects: string;
+  max_weekly_load: number;
+  scheduled_periods: number;
+  relief_this_week: number;
+  relief_all_time: number;
+  available: number;
+}

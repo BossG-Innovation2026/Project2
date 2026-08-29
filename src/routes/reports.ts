@@ -174,14 +174,20 @@ reportsRoutes.get("/history", async (c) => {
 });
 
 /**
- * Absence reasons breakdown.
+ * Absence reasons breakdown (optionally per teacher).
  */
 reportsRoutes.get("/absences-by-reason", async (c) => {
+  const user = c.get("user");
+  const teacherId = c.req.query("teacher_id") ?? (user.role !== "admin" ? String(user.id) : null);
   const from = c.req.query("from");
   const to = c.req.query("to");
   let sql = `SELECT CASE WHEN reason = '' THEN '(no reason)' ELSE reason END AS reason,
                     COUNT(*) AS n FROM absences WHERE status = 'approved'`;
-  const params: string[] = [];
+  const params: Array<string | number> = [];
+  if (teacherId) {
+    sql += " AND teacher_id = ?";
+    params.push(Number(teacherId));
+  }
   if (from && isValidDate(from)) {
     sql += " AND date >= ?";
     params.push(from);
@@ -193,6 +199,134 @@ reportsRoutes.get("/absences-by-reason", async (c) => {
   sql += " GROUP BY reason ORDER BY n DESC";
   const { results } = await c.env.DB.prepare(sql).bind(...params).all();
   return c.json({ reasons: results });
+});
+
+/**
+ * Teacher-specific summary: leaves, relief, workload.
+ */
+reportsRoutes.get("/my-summary", async (c) => {
+  const user = c.get("user");
+  const today = new Date().toISOString().slice(0, 10);
+  const weekStart = startOfWeek(today);
+  const weekEnd = endOfWeek(today);
+
+  const [leavesWeek, leavesAll, leavesPending, reliefWeek, reliefAll, profile] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM absences WHERE teacher_id = ? AND date BETWEEN ? AND ? AND status = 'approved'`
+    ).bind(user.id, weekStart, weekEnd).first<{ n: number }>(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM absences WHERE teacher_id = ? AND status = 'approved'`
+    ).bind(user.id).first<{ n: number }>(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM absences WHERE teacher_id = ? AND status = 'pending'`
+    ).bind(user.id).first<{ n: number }>(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM relief_assignments WHERE reliever_id = ? AND date BETWEEN ? AND ? AND status = 'accepted'`
+    ).bind(user.id, weekStart, weekEnd).first<{ n: number }>(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM relief_assignments WHERE reliever_id = ? AND status = 'accepted'`
+    ).bind(user.id).first<{ n: number }>(),
+    c.env.DB.prepare(
+      `SELECT tp.max_weekly_load FROM teacher_profiles tp WHERE tp.user_id = ?`
+    ).bind(user.id).first<{ max_weekly_load: number }>(),
+  ]);
+
+  const sched = await c.env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM schedules WHERE teacher_id = ?`
+  ).bind(user.id).first<{ n: number }>();
+
+  const scheduled = sched?.n ?? 0;
+  const reliefNow = reliefWeek?.n ?? 0;
+  const maxLoad = profile?.max_weekly_load ?? 0;
+  const totalLoad = scheduled + reliefNow;
+  const utilization = maxLoad > 0 ? Math.round((totalLoad / maxLoad) * 100) : 0;
+
+  return c.json({
+    leaves_this_week: leavesWeek?.n ?? 0,
+    leaves_all_time: leavesAll?.n ?? 0,
+    leaves_pending: leavesPending?.n ?? 0,
+    relief_this_week: reliefWeek?.n ?? 0,
+    relief_all_time: reliefAll?.n ?? 0,
+    scheduled_periods: scheduled,
+    max_weekly_load: maxLoad,
+    total_load: totalLoad,
+    utilization,
+  });
+});
+
+/**
+ * Teacher's monthly leaves (last 6 months).
+ */
+reportsRoutes.get("/my-monthly-leaves", async (c) => {
+  const user = c.get("user");
+  const months: { month: string; label: string; n: number }[] = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    const monthStart = d.toISOString().slice(0, 7) + "-01";
+    const nextMonth = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1));
+    const monthEnd = nextMonth.toISOString().slice(0, 7) + "-01";
+    const label = d.toLocaleString("en-US", { month: "short" });
+    const row = await c.env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM absences WHERE teacher_id = ? AND date >= ? AND date < ? AND status = 'approved'`
+    ).bind(user.id, monthStart, monthEnd).first<{ n: number }>();
+    months.push({ month: monthStart.slice(0, 7), label, n: row?.n ?? 0 });
+  }
+  return c.json({ months });
+});
+
+/**
+ * Teacher's relief assignments grouped by subject.
+ */
+reportsRoutes.get("/my-relief-by-subject", async (c) => {
+  const user = c.get("user");
+  const { results } = await c.env.DB.prepare(
+    `SELECT CASE WHEN subject = '' THEN '(unspecified)' ELSE subject END AS subject,
+            COUNT(*) AS n FROM relief_assignments
+     WHERE reliever_id = ? AND status = 'accepted'
+     GROUP BY subject ORDER BY n DESC`
+  ).bind(user.id).all<{ subject: string; n: number }>();
+  return c.json({ subjects: results });
+});
+
+/**
+ * Teacher's own workload breakdown.
+ */
+reportsRoutes.get("/my-workload", async (c) => {
+  const user = c.get("user");
+  const today = new Date().toISOString().slice(0, 10);
+  const weekStart = startOfWeek(today);
+  const weekEnd = endOfWeek(today);
+
+  const [profile, sched, reliefWeek, reliefAll] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT tp.department, tp.subjects, tp.max_weekly_load FROM teacher_profiles tp WHERE tp.user_id = ?`
+    ).bind(user.id).first<{ department: string; subjects: string; max_weekly_load: number }>(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM schedules WHERE teacher_id = ?`
+    ).bind(user.id).first<{ n: number }>(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM relief_assignments WHERE reliever_id = ? AND date BETWEEN ? AND ? AND status = 'accepted'`
+    ).bind(user.id, weekStart, weekEnd).first<{ n: number }>(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM relief_assignments WHERE reliever_id = ? AND status = 'accepted'`
+    ).bind(user.id).first<{ n: number }>(),
+  ]);
+
+  const scheduled = sched?.n ?? 0;
+  const reliefNow = reliefWeek?.n ?? 0;
+  const maxLoad = profile?.max_weekly_load ?? 0;
+  const available = Math.max(0, maxLoad - scheduled - reliefNow);
+
+  return c.json({
+    department: profile?.department ?? "",
+    subjects: profile?.subjects ?? "",
+    max_weekly_load: maxLoad,
+    scheduled_periods: scheduled,
+    relief_this_week: reliefNow,
+    relief_all_time: reliefAll?.n ?? 0,
+    available,
+  });
 });
 
 /**
