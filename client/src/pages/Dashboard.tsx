@@ -10,13 +10,14 @@ import Reports from "./Reports";
 import HistoryPage from "./History";
 import NotificationsPage from "./Notifications";
 import { ErrorBoundary } from "../components/ErrorBoundary";
-import { CalendarDays, ClipboardList, LifeBuoy, CheckCircle2, XCircle, LayoutDashboard, BarChart3, History as HistoryIcon, Bell, X } from "lucide-react";
+import { CalendarDays, ClipboardList, LifeBuoy, CheckCircle2, XCircle, LayoutDashboard, BarChart3, History as HistoryIcon, Bell, X, FileDown } from "lucide-react";
 
 const PANEL_TABS = [
   { key: "overview", label: "Overview", icon: LayoutDashboard },
   { key: "calendar", label: "Calendar", icon: CalendarDays },
   { key: "history", label: "Reliever History", icon: HistoryIcon },
   { key: "notifications", label: "Notifications", icon: Bell },
+  { key: "file-leave", label: "File a Leave", icon: FileDown },
 ];
 
 const TAB_KEYS = PANEL_TABS.map((t) => t.key);
@@ -26,6 +27,8 @@ interface DashboardData {
   my_absences: Absence[];
   my_assignments: (ReliefRow & { absent_teacher_name: string })[];
   upcoming_absences: (Absence & { assigned_count: number })[];
+  relief_hours: number;
+  leave_hours: number;
   summary: {
     teachers: number;
     pending_absences: number;
@@ -95,6 +98,8 @@ export default function Dashboard() {
 
   const s = data.summary;
   const isAdmin = user?.role === "admin";
+  const pendingAssignments = data.my_assignments.filter((r) => ["assigned", "recommended", "overridden"].includes(r.status) && r.reliever_id === user?.id);
+  const acceptedAssignments = data.my_assignments.filter((r) => r.status === "accepted");
 
   async function respond(id: number, status: "accepted" | "declined") {
     setRespondError(null);
@@ -157,6 +162,8 @@ export default function Dashboard() {
           {tab === "overview" && (
             <ErrorBoundary label="Overview">
             <>
+      {isAdmin ? (
+        <>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Stat label="Teachers" value={s.teachers} />
         <Stat label="Pending leaves" value={s.pending_absences} />
@@ -170,11 +177,9 @@ export default function Dashboard() {
             title="Upcoming leaves"
             subtitle={`${prettyDate(s.today)} — 7 days ahead`}
             actions={
-              isAdmin ? (
-                <Link to="/requests" className="text-xs text-brand-600 font-medium hover:underline flex items-center gap-1">
-                  <ClipboardList size={14} /> Requests
-                </Link>
-              ) : undefined
+              <Link to="/requests" className="text-xs text-brand-600 font-medium hover:underline flex items-center gap-1">
+                <ClipboardList size={14} /> Requests
+              </Link>
             }
           />
           <div className="p-3">
@@ -193,69 +198,111 @@ export default function Dashboard() {
           </div>
         </Card>
 
-        {isAdmin ? (
-          <Card>
-            <CardHeader
-              title="My relief workload"
-              subtitle="Your accepted & pending assignments"
-              actions={
-                <Link to="/relief" className="text-xs text-brand-600 font-medium hover:underline flex items-center gap-1">
-                  <LifeBuoy size={14} /> Finder
-                </Link>
-              }
-            />
-            <div className="p-3">
-              {data.my_assignments.length === 0 && <EmptyState message="No relief assignments yet" />}
-              {data.my_assignments.map((r) => (
-                <div key={r.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-slate-50 border-b border-slate-50 last:border-0">
-                  <div>
-                    <div className="text-sm font-medium text-fg">Cover for {r.absent_teacher_name}</div>
-                    <div className="text-xs text-muted">{prettyDate(r.date)} · Period {r.period} · {r.class_name || r.subject || "—"}</div>
-                  </div>
-                  <Badge className={RELIEF_STATUS_STYLE[r.status]}>{r.status}</Badge>
+        <Card>
+          <CardHeader
+            title="My relief workload"
+            subtitle="Your accepted & pending assignments"
+            actions={
+              <Link to="/relief" className="text-xs text-brand-600 font-medium hover:underline flex items-center gap-1">
+                <LifeBuoy size={14} /> Finder
+              </Link>
+            }
+          />
+          <div className="p-3">
+            {data.my_assignments.length === 0 && <EmptyState message="No relief assignments yet" />}
+            {data.my_assignments.map((r) => (
+              <div key={r.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-slate-50 border-b border-slate-50 last:border-0">
+                <div>
+                  <div className="text-sm font-medium text-fg">Cover for {r.absent_teacher_name}</div>
+                  <div className="text-xs text-muted">{prettyDate(r.date)} · Period {r.period} · {r.class_name || r.subject || "—"}</div>
                 </div>
-              ))}
-            </div>
-          </Card>
-        ) : (
-          <Card>
-            <CardHeader
-              title="My relief assignments"
-              subtitle="Assignments you are covering"
-            />
-            <div className="p-3">
-              <Flash error={respondError} />
-              {data.my_assignments.length === 0 && <EmptyState message="No relief assignments yet" />}
-              {data.my_assignments.map((r) => {
-                const actionable = r.reliever_id === user?.id && ["assigned", "recommended", "overridden"].includes(r.status);
-                return (
-                  <div key={r.id} className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg hover:bg-slate-50 border-b border-slate-50 last:border-0">
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium text-fg">Cover for {r.absent_teacher_name}</div>
-                      <div className="text-xs text-muted">{prettyDate(r.date)} · Period {r.period} · {r.class_name || r.subject || "—"}</div>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <Badge className={RELIEF_STATUS_STYLE[r.status]}>{r.status}</Badge>
-                      {actionable && (
-                        <>
-                          <Button variant="success" size="sm" onClick={() => void respond(r.id, "accepted")}>
-                            <CheckCircle2 size={14} /> Accept
-                          </Button>
-                          <Button variant="danger" size="sm" onClick={() => void respond(r.id, "declined")}>
-                            <XCircle size={14} /> Decline
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-        )}
+                <Badge className={RELIEF_STATUS_STYLE[r.status]}>{r.status}</Badge>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+        </>
+      ) : (
+        <>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Stat label="Hours Relieved" value={data.relief_hours} sub="periods done" />
+        <Stat label="Hours on Leave" value={data.leave_hours} sub="periods taken" />
+        <Stat label="Pending leaves" value={s.pending_absences} />
+        <Stat label="Leaves this week" value={s.absences_this_week} />
       </div>
 
-      {!isAdmin && (
+      <div className="grid lg:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader
+            title="Pending relief requests"
+            subtitle="Assignments awaiting your response"
+          />
+          <div className="p-3">
+            <Flash error={respondError} />
+            {pendingAssignments.length === 0 && <EmptyState message="No pending relief requests" />}
+            {pendingAssignments.map((r) => (
+              <div key={r.id} className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg hover:bg-slate-50 border-b border-slate-50 last:border-0">
+                <div className="min-w-0">
+                  <div className="text-sm font-medium text-fg">Cover for {r.absent_teacher_name}</div>
+                  <div className="text-xs text-muted">{prettyDate(r.date)} · Period {r.period} · {r.class_name || r.subject || "—"}</div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Badge className={RELIEF_STATUS_STYLE[r.status]}>{r.status}</Badge>
+                  <Button variant="success" size="sm" onClick={() => void respond(r.id, "accepted")}>
+                    <CheckCircle2 size={14} /> Accept
+                  </Button>
+                  <Button variant="danger" size="sm" onClick={() => void respond(r.id, "declined")}>
+                    <XCircle size={14} /> Decline
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="My accepted assignments"
+            subtitle="Relief duties you've accepted"
+          />
+          <div className="p-3">
+            {acceptedAssignments.length === 0 && <EmptyState message="No accepted assignments" />}
+            {acceptedAssignments.map((r) => (
+              <div key={r.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-slate-50 border-b border-slate-50 last:border-0">
+                <div>
+                  <div className="text-sm font-medium text-fg">Cover for {r.absent_teacher_name}</div>
+                  <div className="text-xs text-muted">{prettyDate(r.date)} · Period {r.period} · {r.class_name || r.subject || "—"}</div>
+                </div>
+                <Badge className={RELIEF_STATUS_STYLE[r.status]}>{r.status}</Badge>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Upcoming leaves"
+            subtitle="Your approved absences"
+          />
+          <div className="p-3">
+            {data.my_absences.length === 0 && <EmptyState message="No upcoming leaves" />}
+            {data.my_absences.map((a) => (
+              <div key={a.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-slate-50 border-b border-slate-50 last:border-0">
+                <div>
+                  <div className="text-sm font-medium text-fg">{prettyDate(a.date)}</div>
+                  <div className="text-xs text-muted">Period {a.period}{a.reason ? ` · ${a.reason}` : ""}</div>
+                </div>
+                <Badge className={ABSENCE_STATUS_STYLE[a.status]}>{a.status}</Badge>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+        </>
+      )}
+
+      {tab === "file-leave" && !isAdmin && (
         <div id="file-absence">
           <Card>
             <CardHeader
@@ -288,33 +335,28 @@ export default function Dashboard() {
         </div>
       )}
 
-      <Card>
-        <CardHeader
-          title="Quick actions"
-          actions={<CalendarDays className="text-dim" size={20} />}
-        />
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4">
-          <button type="button" onClick={() => switchTab("calendar")} className="text-left rounded-xl border border-line p-4 hover:border-brand-400 hover:shadow-sm transition-colors">
-            <div className="font-medium text-sm text-fg">View calendar</div>
-            <div className="text-xs text-dim mt-1">Weekly coverage & assignments</div>
-          </button>
-          {isAdmin ? (
-            <Link to="/requests" className="rounded-xl border border-line p-4 hover:border-brand-400 hover:shadow-sm transition-colors">
+      {!isAdmin && (
+        <Card>
+          <CardHeader
+            title="Quick actions"
+            actions={<CalendarDays className="text-dim" size={20} />}
+          />
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4">
+            <button type="button" onClick={() => switchTab("calendar")} className="text-left rounded-xl border border-line p-4 hover:border-brand-400 hover:shadow-sm transition-colors">
+              <div className="font-medium text-sm text-fg">View calendar</div>
+              <div className="text-xs text-dim mt-1">Weekly coverage & assignments</div>
+            </button>
+            <button type="button" onClick={() => switchTab("file-leave")} className="text-left rounded-xl border border-line p-4 hover:border-brand-400 hover:shadow-sm transition-colors">
               <div className="font-medium text-sm text-fg">File a leave</div>
               <div className="text-xs text-dim mt-1">Log a leave request</div>
-            </Link>
-          ) : (
-            <a href="#file-absence" className="rounded-xl border border-line p-4 hover:border-brand-400 hover:shadow-sm transition-colors">
-              <div className="font-medium text-sm text-fg">File a leave</div>
-              <div className="text-xs text-dim mt-1">Log a leave request</div>
-            </a>
-          )}
-          <button type="button" onClick={() => switchTab("reports")} className="text-left rounded-xl border border-line p-4 hover:border-brand-400 hover:shadow-sm transition-colors">
-            <div className="font-medium text-sm text-fg">Reports</div>
-            <div className="text-xs text-dim mt-1">Workload, coverage & analytics</div>
-          </button>
-        </div>
-      </Card>
+            </button>
+            <button type="button" onClick={() => switchTab("reports")} className="text-left rounded-xl border border-line p-4 hover:border-brand-400 hover:shadow-sm transition-colors">
+              <div className="font-medium text-sm text-fg">Reports</div>
+              <div className="text-xs text-dim mt-1">Workload, coverage & analytics</div>
+            </button>
+          </div>
+        </Card>
+      )}
             </>
             </ErrorBoundary>
           )}

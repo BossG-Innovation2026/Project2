@@ -11,6 +11,7 @@ import {
   LogOut,
   BarChart3,
   FileDown,
+  CalendarCheck,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { assetUrl, useBrand } from "../context/BrandContext";
@@ -21,6 +22,7 @@ const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, adminOnly: false },
   { to: "/reports", label: "Reports", icon: BarChart3, adminOnly: false },
   { to: "/file-leave", label: "File a leave", icon: FileDown, adminOnly: false },
+  { to: "/availability", label: "Availability Calendar", icon: CalendarCheck, adminOnly: false },
   { to: "/requests", label: "Leave Requests", icon: ClipboardList, adminOnly: true },
   { to: "/relief", label: "Reliever Finder", icon: LifeBuoy, adminOnly: true },
   { to: "/schedules", label: "Class Schedules", icon: CalendarRange, adminOnly: true },

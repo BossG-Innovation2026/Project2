@@ -16,7 +16,8 @@ interface CoverageData {
 export default function Calendar() {
   const { user } = useAuth();
   const [weekStart, setWeekStart] = useState(() => startOfWeekISO(new Date().toISOString().slice(0, 10)));
-  const [teacherFilter, setTeacherFilter] = useState<number | 0>(0);
+  const isAdmin = user?.role === "admin";
+  const [teacherFilter, setTeacherFilter] = useState<number | 0>(() => isAdmin ? 0 : (user?.id ?? 0));
 
   const weekEnd = endOfWeekISO(weekStart);
   const { data, loading, error } = usePolling<CoverageData>(
@@ -64,14 +65,16 @@ export default function Calendar() {
           >
             <ChevronRight size={16} />
           </button>
-          <Select value={teacherFilter} onChange={(e) => setTeacherFilter(Number(e.target.value))} className="w-48">
-            <option value={0}>All teachers</option>
-            {data.teachers.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </Select>
+          {isAdmin && (
+            <Select value={teacherFilter} onChange={(e) => setTeacherFilter(Number(e.target.value))} className="w-48">
+              <option value={0}>All teachers</option>
+              {data.teachers.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </Select>
+          )}
         </div>
       </div>
 

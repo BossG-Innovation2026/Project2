@@ -62,6 +62,19 @@ app.get("/api/dashboard", requireAuth, async (c) => {
 
   const summary = await getSummary(c.env.DB);
 
+  const reliefHoursRow = await c.env.DB.prepare(
+    `SELECT COUNT(*) AS cnt FROM relief_assignments
+     WHERE reliever_id = ? AND status = 'accepted'`
+  )
+    .bind(user.id)
+    .first<{ cnt: number }>();
+  const leaveHoursRow = await c.env.DB.prepare(
+    `SELECT COUNT(*) AS cnt FROM absences
+     WHERE teacher_id = ? AND status = 'approved'`
+  )
+    .bind(user.id)
+    .first<{ cnt: number }>();
+
   const { results: upcomingAbsences } = await c.env.DB.prepare(
     `SELECT a.id, a.date, a.period, a.reason, u.name AS teacher_name,
             (SELECT COUNT(*) FROM relief_assignments r
@@ -79,6 +92,8 @@ app.get("/api/dashboard", requireAuth, async (c) => {
     my_assignments: myAssignments,
     upcoming_absences: upcomingAbsences,
     summary,
+    relief_hours: reliefHoursRow?.cnt ?? 0,
+    leave_hours: leaveHoursRow?.cnt ?? 0,
   });
 });
 
