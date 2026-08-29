@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { usePolling } from "../hooks/usePolling";
 import { api, type Absence, type ReliefRow } from "../api";
 import { Card, CardHeader, Stat, Spinner, EmptyState, Badge, Button, Flash } from "../components/ui";
@@ -9,16 +9,7 @@ import Calendar from "./Calendar";
 import HistoryPage from "./History";
 import NotificationsPage from "./Notifications";
 import { ErrorBoundary } from "../components/ErrorBoundary";
-import { CalendarDays, ClipboardList, LifeBuoy, CheckCircle2, XCircle, LayoutDashboard, History as HistoryIcon, Bell } from "lucide-react";
-
-const PANEL_TABS = [
-  { key: "overview", label: "Overview", icon: LayoutDashboard },
-  { key: "calendar", label: "Calendar", icon: CalendarDays },
-  { key: "history", label: "Reliever History", icon: HistoryIcon },
-  { key: "notifications", label: "Notifications", icon: Bell },
-];
-
-const TAB_KEYS = PANEL_TABS.map((t) => t.key);
+import { ClipboardList, LifeBuoy, CheckCircle2, XCircle } from "lucide-react";
 
 interface DashboardData {
   user: { id: number; name: string; role: string };
@@ -49,32 +40,6 @@ export default function Dashboard() {
     30000,
     [refreshKey]
   );
-  const [searchParams, setSearchParams] = useSearchParams();
-  const rawTab = searchParams.get("tab") ?? "overview";
-  const tab: string = TAB_KEYS.includes(rawTab) ? rawTab : "overview";
-  const [unread, setUnread] = useState(0);
-
-  useEffect(() => {
-    let alive = true;
-    async function poll() {
-      try {
-        const d = await api<{ unread_count: number }>("/api/notifications?limit=1");
-        if (alive) setUnread(d.unread_count);
-      } catch {
-        /* ignore */
-      }
-    }
-    void poll();
-    const t = setInterval(poll, 60000);
-    return () => {
-      alive = false;
-      clearInterval(t);
-    };
-  }, []);
-
-  function switchTab(next: string) {
-    setSearchParams(next === "overview" ? {} : { tab: next }, { replace: true });
-  }
 
   if (loading || !data) return <Spinner />;
 
@@ -95,38 +60,30 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {!isAdmin && pendingAssignments.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+          <LifeBuoy size={20} className="text-amber-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800">Relief assignment offer pending</p>
+            <p className="text-sm text-amber-700">You have {pendingAssignments.length} pending relief {pendingAssignments.length === 1 ? "assignment" : "assignments"} waiting for your response.</p>
+          </div>
+        </div>
+      )}
+      {!isAdmin && data.my_absences.some((a) => a.status === "approved") && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 flex items-start gap-3">
+          <CheckCircle2 size={20} className="text-emerald-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-emerald-800">Leave request approved</p>
+            <p className="text-sm text-emerald-700">Your leave {data.my_absences.filter((a) => a.status === "approved").length === 1 ? "request has" : "requests have"} been approved.</p>
+          </div>
+        </div>
+      )}
+
       <div>
         <h1 className="text-xl font-bold text-fg">Dashboard</h1>
         <p className="text-sm text-muted">Welcome back, {data.user.name}</p>
       </div>
 
-      <div className="border-b border-line flex gap-6 overflow-x-auto">
-        {PANEL_TABS.map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => switchTab(key)}
-            className={`flex items-center gap-2 pb-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${
-              tab === key
-                ? "border-brand-600 text-brand-700 dark:border-brand-400 dark:text-brand-300"
-                : "border-transparent text-muted hover:text-fg"
-            }`}
-          >
-            <Icon size={15} />
-            {label}
-            {key === "notifications" && unread > 0 && (
-              <span className="bg-rose-500 text-white text-[10px] rounded-full h-4 min-w-4 px-1 flex items-center justify-center">
-                {unread}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      <div className="space-y-6">
-          {tab === "overview" && (
-            <ErrorBoundary label="Overview">
-            <>
       {isAdmin ? (
         <>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -190,25 +147,6 @@ export default function Dashboard() {
         </>
       ) : (
         <>
-      {pendingAssignments.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
-          <LifeBuoy size={20} className="text-amber-600 mt-0.5 shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-amber-800">Relief assignment offer pending</p>
-            <p className="text-sm text-amber-700">You have {pendingAssignments.length} pending relief {pendingAssignments.length === 1 ? "assignment" : "assignments"} waiting for your response.</p>
-          </div>
-        </div>
-      )}
-      {data.my_absences.some((a) => a.status === "approved") && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 flex items-start gap-3">
-          <CheckCircle2 size={20} className="text-emerald-600 mt-0.5 shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-emerald-800">Leave request approved</p>
-            <p className="text-sm text-emerald-700">Your leave {data.my_absences.filter((a) => a.status === "approved").length === 1 ? "request has" : "requests have"} been approved.</p>
-          </div>
-        </div>
-      )}
-
       <div className="grid lg:grid-cols-3 gap-6">
         <Card>
           <CardHeader
@@ -279,13 +217,13 @@ export default function Dashboard() {
         </>
       )}
 
-            </>
-            </ErrorBoundary>
-          )}
-          {tab === "calendar" && <ErrorBoundary label="Calendar"><Calendar /></ErrorBoundary>}
-          {tab === "history" && <ErrorBoundary label="Reliever History"><HistoryPage /></ErrorBoundary>}
-          {tab === "notifications" && <ErrorBoundary label="Notifications"><NotificationsPage /></ErrorBoundary>}
-      </div>
+      {!isAdmin && (
+        <>
+          <ErrorBoundary label="Calendar"><Calendar /></ErrorBoundary>
+          <ErrorBoundary label="Reliever History"><HistoryPage /></ErrorBoundary>
+          <ErrorBoundary label="Notifications"><NotificationsPage /></ErrorBoundary>
+        </>
+      )}
     </div>
   );
 }
