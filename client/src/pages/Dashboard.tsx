@@ -302,62 +302,39 @@ export default function Dashboard() {
         </>
       )}
 
-      {tab === "file-leave" && !isAdmin && (
-        <div id="file-absence">
-          <Card>
-            <CardHeader
-              title="File a leave"
-              subtitle="Submitted requests go to the admin for approval"
-              actions={<ClipboardList className="text-dim" size={20} />}
-            />
-            <form onSubmit={submitAbsence} className="p-4 space-y-3">
-              <Flash error={fileError} />
-              {fileMsg && <div className="rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-3">{fileMsg}</div>}
-              <div className="grid sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-fg mb-1">Date</label>
-                  <Input type="date" value={fileForm.date} onChange={(e) => setFileForm((f) => ({ ...f, date: e.target.value }))} required />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-fg mb-1">Period</label>
-                  <Input type="number" min={1} max={24} value={fileForm.period} onChange={(e) => setFileForm((f) => ({ ...f, period: Number(e.target.value) }))} required />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-fg mb-1">Reason (optional)</label>
-                  <Input value={fileForm.reason} onChange={(e) => setFileForm((f) => ({ ...f, reason: e.target.value }))} placeholder="e.g. Sick leave, seminar" />
-                </div>
-              </div>
-              <div className="flex justify-end">
-                <Button type="submit" disabled={fileBusy}>{fileBusy ? "Submitting..." : "Submit request"}</Button>
-              </div>
-            </form>
-          </Card>
-        </div>
-      )}
-
-      {!isAdmin && (
-        <Card>
-          <CardHeader
-            title="Quick actions"
-            actions={<CalendarDays className="text-dim" size={20} />}
-          />
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4">
-            <button type="button" onClick={() => switchTab("calendar")} className="text-left rounded-xl border border-line p-4 hover:border-brand-400 hover:shadow-sm transition-colors">
-              <div className="font-medium text-sm text-fg">View calendar</div>
-              <div className="text-xs text-dim mt-1">Weekly coverage & assignments</div>
-            </button>
-            <button type="button" onClick={() => switchTab("file-leave")} className="text-left rounded-xl border border-line p-4 hover:border-brand-400 hover:shadow-sm transition-colors">
-              <div className="font-medium text-sm text-fg">File a leave</div>
-              <div className="text-xs text-dim mt-1">Log a leave request</div>
-            </button>
-            <button type="button" onClick={() => switchTab("reports")} className="text-left rounded-xl border border-line p-4 hover:border-brand-400 hover:shadow-sm transition-colors">
-              <div className="font-medium text-sm text-fg">Reports</div>
-              <div className="text-xs text-dim mt-1">Workload, coverage & analytics</div>
-            </button>
-          </div>
-        </Card>
-      )}
             </>
+            </ErrorBoundary>
+          )}
+          {tab === "file-leave" && !isAdmin && (
+            <ErrorBoundary label="File a Leave">
+              <Card>
+                <CardHeader
+                  title="File a leave"
+                  subtitle="Submitted requests go to the admin for approval"
+                  actions={<ClipboardList className="text-dim" size={20} />}
+                />
+                <form onSubmit={submitAbsence} className="p-4 space-y-3">
+                  <Flash error={fileError} />
+                  {fileMsg && <div className="rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-3">{fileMsg}</div>}
+                  <div className="grid sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-fg mb-1">Date</label>
+                      <Input type="date" value={fileForm.date} onChange={(e) => setFileForm((f) => ({ ...f, date: e.target.value }))} required />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-fg mb-1">Period</label>
+                      <Input type="number" min={1} max={24} value={fileForm.period} onChange={(e) => setFileForm((f) => ({ ...f, period: Number(e.target.value) }))} required />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-fg mb-1">Reason (optional)</label>
+                      <Input value={fileForm.reason} onChange={(e) => setFileForm((f) => ({ ...f, reason: e.target.value }))} placeholder="e.g. Sick leave, seminar" />
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button type="submit" disabled={fileBusy}>{fileBusy ? "Submitting..." : "Submit request"}</Button>
+                  </div>
+                </form>
+              </Card>
             </ErrorBoundary>
           )}
           {tab === "calendar" && <ErrorBoundary label="Calendar"><Calendar /></ErrorBoundary>}
