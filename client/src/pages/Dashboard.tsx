@@ -19,7 +19,7 @@ const PANEL_TABS = [
   { key: "notifications", label: "Notifications", icon: Bell },
 ];
 
-const TAB_KEYS = PANEL_TABS.map((t) => t.key);
+const TAB_KEYS = [...PANEL_TABS.map((t) => t.key), "file-leave"];
 
 interface DashboardData {
   user: { id: number; name: string; role: string };
