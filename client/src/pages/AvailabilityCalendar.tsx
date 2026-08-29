@@ -87,12 +87,12 @@ export default function AvailabilityCalendar() {
     }
   }
 
-  function getSlotStatus(date: string, period: number): { status: SlotStatus | null; locked: boolean; source: string } {
+  function getSlotStatus(date: string, period: number): { status: SlotStatus; locked: boolean; source: string } {
     const key = `${date}|${period}`;
+    if (lockedSlots.has(key)) return { status: "class", locked: true, source: "locked" };
     if (edits[key] !== undefined) return { status: edits[key], locked: false, source: "edited" };
-    if (lockedSlots.has(key)) return { status: null, locked: true, source: "locked" };
     if (existingAvail.has(key)) return { status: existingAvail.get(key)!, locked: false, source: "saved" };
-    return { status: null, locked: false, source: "none" };
+    return { status: "available", locked: false, source: "default" };
   }
 
   function setSlotStatus(date: string, period: number, status: SlotStatus) {
