@@ -339,28 +339,11 @@ export default function Dashboard() {
                 </div>
               </div>
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-fg">Period(s)</label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const all = Array.from({ length: data.period_count }, (_, i) => i + 1);
-                      setSelectedPeriods((prev) => prev.length === all.length ? [] : all);
-                    }}
-                    className={`text-xs font-medium px-2.5 py-1 rounded-md transition-colors ${
-                      selectedPeriods.length === data.period_count
-                        ? "bg-brand-600 text-white"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    }`}
-                  >
-                    {selectedPeriods.length === data.period_count ? "Clear All" : "Whole Day"}
-                  </button>
-                </div>
+                <label className="block text-sm font-medium text-fg mb-2">Period(s)</label>
                 <div className="flex flex-wrap gap-1.5">
                   {Array.from({ length: data.period_count }, (_, i) => {
                     const period = i + 1;
                     const isSelected = selectedPeriods.includes(period);
-                    const label = data.period_names[i] ? `P${period}` : `P${period}`;
                     const subtitle = data.period_names[i] ?? "";
                     return (
                       <button
@@ -382,6 +365,20 @@ export default function Dashboard() {
                       </button>
                     );
                   })}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const all = Array.from({ length: data.period_count }, (_, i) => i + 1);
+                      setSelectedPeriods((prev) => prev.length === all.length ? [] : all);
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                      selectedPeriods.length === data.period_count
+                        ? "bg-brand-600 text-white border-brand-600 shadow-sm"
+                        : "bg-white text-slate-600 border-slate-200 hover:border-brand-300 hover:bg-brand-50"
+                    }`}
+                  >
+                    {selectedPeriods.length === data.period_count ? "Clear All" : "Whole Day"}
+                  </button>
                 </div>
                 {selectedPeriods.length > 0 && (
                   <div className="text-xs text-muted mt-1.5">
@@ -407,7 +404,7 @@ export default function Dashboard() {
       {reportsOpen && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/40" onClick={() => setReportsOpen(false)} />
-          <div className="relative w-full max-w-5xl bg-canvas border-l border-line overflow-y-auto shadow-2xl animate-slide-in-right">
+          <div className="relative w-full max-w-5xl bg-canvas border-l border-line overflow-y-auto shadow-2xl">
             <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-3 bg-canvas border-b border-line">
               <h2 className="text-lg font-bold text-fg">Reports & Analytics</h2>
               <button
