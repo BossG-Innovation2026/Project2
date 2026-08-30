@@ -63,12 +63,12 @@ teachersRoutes.post("/", requireAdmin, async (c) => {
   if (existing) return c.json({ error: "Email already in use" }, 409);
 
   const hash = await createPasswordHash(password);
-  const result = await c.env.DB.prepare(
-    "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, 'teacher')"
-  )
-    .bind(name, email, hash)
-    .run();
-  const userId = Number(result.meta.last_row_id);
+  const result = await c.env.DB.batch([
+    c.env.DB.prepare(
+      "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, 'teacher')"
+    ).bind(name, email, hash),
+  ]);
+  const userId = Number(result[0].meta.last_row_id);
   await c.env.DB.prepare(
     `INSERT INTO teacher_profiles (user_id, department, subjects, cluster, room, max_weekly_load, notes)
      VALUES (?, ?, ?, ?, ?, ?, ?)`
@@ -123,6 +123,11 @@ teachersRoutes.put("/:id", requireAdmin, async (c) => {
     if (existing) return c.json({ error: "Email already in use" }, 409);
   }
 
+  // Validate password BEFORE committing any changes to avoid partial writes
+  if (body.password !== undefined && body.password.length < 8) {
+    return c.json({ error: "Password must be at least 8 characters" }, 400);
+  }
+
   await c.env.DB.prepare(
     "UPDATE users SET name = ?, email = ?, active = ? WHERE id = ?"
   )
@@ -130,9 +135,6 @@ teachersRoutes.put("/:id", requireAdmin, async (c) => {
     .run();
 
   if (body.password) {
-    if (body.password.length < 8) {
-      return c.json({ error: "Password must be at least 8 characters" }, 400);
-    }
     const hash = await createPasswordHash(body.password);
     await c.env.DB.prepare("UPDATE users SET password_hash = ? WHERE id = ?").bind(hash, id).run();
   }

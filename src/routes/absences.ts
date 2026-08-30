@@ -122,7 +122,8 @@ absencesRoutes.post("/", async (c) => {
 
     const result = await c.env.DB.prepare(
       `INSERT INTO absences (teacher_id, date, period, reason, status, requested_by, reviewed_by, reviewed_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT (teacher_id, date, period) DO NOTHING`
     )
       .bind(
         teacherId,
@@ -135,6 +136,10 @@ absencesRoutes.post("/", async (c) => {
         wantStatus === "approved" ? nowISO() : null
       )
       .run();
+    if (result.meta.changes === 0) {
+      duplicates.push(period);
+      continue;
+    }
     createdIds.push(Number(result.meta.last_row_id));
   }
 

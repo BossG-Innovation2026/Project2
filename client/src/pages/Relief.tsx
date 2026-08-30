@@ -37,6 +37,8 @@ export default function Relief() {
   const [override, setOverride] = useState(false);
   const [overrideTeacher, setOverrideTeacher] = useState<number>(0);
   const [matches, setMatches] = useState<Record<number, Candidate[]>>({});
+  const [loadedIds, setLoadedIds] = useState<Set<number>>(new Set());
+  const [candErrors, setCandErrors] = useState<Record<number, string>>({});
 
   const { data } = usePolling<{ assignments: ReliefRow[] }>(
     () => api(`/api/relief${isAdmin ? "" : "?mine=1"}`),
@@ -68,12 +70,20 @@ export default function Relief() {
     if (!isAdmin || approvedAbsences.length === 0) return;
     let alive = true;
     for (const a of approvedAbsences) {
+      if (loadedIds.has(a.id) || candErrors[a.id]) continue;
       api<{ candidates: Candidate[] }>(`/api/relief/candidates/${a.id}`)
-        .then((d) => { if (alive) setMatches((m) => ({ ...m, [a.id]: d.candidates ?? [] })); })
-        .catch(() => {});
+        .then((d) => {
+          if (alive) {
+            setMatches((m) => ({ ...m, [a.id]: d.candidates ?? [] }));
+            setLoadedIds((s) => { s.add(a.id); return new Set(s); });
+          }
+        })
+        .catch((err) => {
+          if (alive) setCandErrors((e) => ({ ...e, [a.id]: err instanceof Error ? err.message : "Failed to load" }));
+        });
     }
     return () => { alive = false; };
-  }, [approvedAbsences, isAdmin, refreshKey]);
+  }, [approvedAbsences, isAdmin, refreshKey, loadedIds, candErrors]);
 
   async function confirmAssign(absence: Absence, candidate: Candidate) {
     setConfirm({ absence, candidate });
@@ -142,8 +152,12 @@ export default function Relief() {
                   </div>
 
                   <div className="px-3 py-2">
-                    {cands.length === 0 ? (
+                    {candErrors[a.id] ? (
+                      <div className="text-[11px] text-rose-600">Failed to load</div>
+                    ) : !loadedIds.has(a.id) ? (
                       <div className="text-[11px] text-dim">Loading…</div>
+                    ) : cands.length === 0 ? (
+                      <div className="text-[11px] text-dim">No available relievers</div>
                     ) : (
                       <>
                         <div className="text-[10px] font-semibold text-dim uppercase tracking-wide mb-1.5">Recommended</div>

@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import type { AppContext } from "../types";
+import type { AppContext, Variables } from "../types";
 import { requireAuth, requireAdmin, notifyUser } from "../lib/auth";
 import { nowISO } from "../lib/dates";
 import { detectConflicts, conflictSummary } from "../services/conflicts";
@@ -82,7 +82,7 @@ reliefRoutes.post("/assign", requireAdmin, async (c) => {
   const absence = await c.env.DB.prepare(
     `SELECT a.*, s.subject, s.class_name, u.name AS teacher_name
      FROM absences a
-     LEFT JOIN schedules s ON s.teacher_id = a.teacher_id AND s.weekday = (SELECT CAST(strftime('%w', a.date) AS INTEGER)) AND s.period = a.period
+     LEFT JOIN schedules s ON s.teacher_id = a.teacher_id AND s.weekday = (SELECT (CAST(strftime('%w', a.date) AS INTEGER) + 6) % 7) AND s.period = a.period
      JOIN users u ON u.id = a.teacher_id
      WHERE a.id = ?`
   )
@@ -178,7 +178,7 @@ reliefRoutes.post("/assign", requireAdmin, async (c) => {
     "/calendar"
   );
 
-  return c.json({ id: assignmentId, override: isOverride });
+  return c.json({ id: assignmentId, override: isOverride }, 201);
 });
 
 /**
@@ -236,6 +236,9 @@ reliefRoutes.put("/:id/respond", async (c) => {
       );
     }
   } else {
+    // Reliever declined — if this absence now has no active coverage, re-run
+    // recommendations so the absence isn't silently left uncovered.
+    await reRecommendIfUncovered(c, row);
     const admins = await c.env.DB.prepare("SELECT id FROM users WHERE role = 'admin'").all<{ id: number }>();
     for (const a of admins.results) {
       await notifyUser(
@@ -249,6 +252,59 @@ reliefRoutes.put("/:id/respond", async (c) => {
   }
   return c.json({ ok: true });
 });
+
+/**
+ * After a decline, if the absence has no remaining active (assigned/accepted/
+ * overridden) assignment, generate a fresh set of recommended relievers.
+ */
+async function reRecommendIfUncovered(c: { env: AppEnv; get: <K extends keyof Variables>(key: K) => Variables[K] }, row: {
+  reliever_id: number;
+  status: string;
+  date: string;
+  period: number;
+  absent_teacher_id: number;
+  absent_teacher_name: string;
+}): Promise<void> {
+  const absenceId = await c.env.DB.prepare(
+    `SELECT r.absence_id FROM relief_assignments r WHERE r.date = ? AND r.period = ? AND r.reliever_id = ?
+     ORDER BY r.id DESC LIMIT 1`
+  )
+    .bind(row.date, row.period, row.reliever_id)
+    .first<{ absence_id: number }>();
+  if (!absenceId) return;
+
+  const active = await c.env.DB.prepare(
+    `SELECT id FROM relief_assignments
+     WHERE absence_id = ? AND status IN ('assigned','accepted','overridden')`
+  )
+    .bind(absenceId.absence_id)
+    .first();
+  if (active) return; // still covered
+
+  const absence = await c.env.DB.prepare(
+    "SELECT teacher_id, date, period, status FROM absences WHERE id = ?"
+  )
+    .bind(absenceId.absence_id)
+    .first<{ teacher_id: number; date: string; period: number; status: string }>();
+  if (!absence || absence.status !== "approved") return;
+
+  const existing = await c.env.DB.prepare(
+    "SELECT id FROM relief_assignments WHERE absence_id = ? AND status = 'recommended'"
+  )
+    .bind(absenceId.absence_id)
+    .first();
+  if (existing) return;
+
+  const candidates = await findCandidates(c.env, absence.teacher_id, absence.date, absence.period, 3);
+  for (const cand of candidates) {
+    await c.env.DB.prepare(
+      `INSERT INTO relief_assignments (absence_id, reliever_id, date, period, subject, class_name, status, is_override, created_by)
+       VALUES (?, ?, ?, ?, '', '', 'recommended', 0, ?)`
+    )
+      .bind(absenceId.absence_id, cand.teacher_id, absence.date, absence.period, c.get("user").id)
+      .run();
+  }
+}
 
 /**
  * Conflict check preview for a specific teacher/date/period.

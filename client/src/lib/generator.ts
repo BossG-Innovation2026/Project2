@@ -140,7 +140,8 @@ export function generateTimetable(opts: {
       for (const subject of classSubjects) {
         const n = demand.get(subject)!.get(cls);
         if (!n) continue; // this class does not take the subject
-        const teacher = bound.get(subject.toLowerCase())!;
+        const teacher = bound.get(subject.toLowerCase());
+        if (!teacher) continue; // no specialist — already recorded as unplaced
         const days = Array.from({ length: n }, (_, i) => i); // front-loaded
 
         let placed = false;
