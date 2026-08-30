@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import type { AppContext, Variables } from "../types";
+import type { AppContext, AppEnv, Variables } from "../types";
 import { requireAuth, requireAdmin, notifyUser } from "../lib/auth";
 import { nowISO } from "../lib/dates";
 import { detectConflicts, conflictSummary } from "../services/conflicts";

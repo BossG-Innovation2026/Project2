@@ -135,7 +135,9 @@ reportsRoutes.get("/coverage", async (c) => {
  * Relief assignment history (optionally per teacher).
  */
 reportsRoutes.get("/history", async (c) => {
-  const teacherId = c.req.query("teacher_id");
+  const user = c.get("user");
+  // Non-admins may only view their own relief history
+  const teacherId = user.role !== "admin" ? String(user.id) : c.req.query("teacher_id");
   const from = c.req.query("from");
   const to = c.req.query("to");
   const status = c.req.query("status");
@@ -333,7 +335,9 @@ reportsRoutes.get("/my-workload", async (c) => {
  * CSV export of history (admin convenience).
  */
 reportsRoutes.get("/export.csv", async (c) => {
-  const teacherId = c.req.query("teacher_id");
+  const user = c.get("user");
+  // Non-admins may only export their own relief history
+  const teacherId = user.role !== "admin" ? String(user.id) : c.req.query("teacher_id");
   const from = c.req.query("from");
   const to = c.req.query("to");
 

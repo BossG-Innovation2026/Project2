@@ -76,6 +76,38 @@ describe("reports", () => {
     expect(Array.isArray(body.history)).toBe(true);
   });
 
+  it("teacher can only see their own history (role gating)", async () => {
+    // teacher A gets an assignment as reliever
+    const absence = await request("/api/absences", {
+      method: "POST",
+      headers: authHeaders(adminToken),
+      body: { teacher_id: ids.teacherB, date: addDays(todayISO(), 1), period: 1, reason: "gate test" },
+    });
+    const { ids: absenceIds } = await absence.json();
+    await request("/api/relief/assign", {
+      method: "POST",
+      headers: authHeaders(adminToken),
+      body: { absence_id: absenceIds[0], reliever_id: ids.teacherA },
+    });
+
+    // teacher C requests teacher A's history — must get teacher A's own rows only
+    const tC = await login("teacher.c@cshs.edu", "teacherpass1");
+    const res = await request(`/api/reports/history?teacher_id=${ids.teacherA}`, { headers: authHeaders(tC) });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    // teacher C is forced to their own history (which has none), so they cannot see teacher A's rows
+    expect(body.history.length).toBe(0);
+  });
+
+  it("teacher CSV export is limited to own history", async () => {
+    const tC = await login("teacher.c@cshs.edu", "teacherpass1");
+    const res = await request(`/api/reports/export.csv?teacher_id=${ids.teacherA}`, { headers: authHeaders(tC) });
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    // Only the header line (no data rows) since teacher C has no history
+    expect(text.split("\n").length).toBeLessThanOrEqual(2);
+  });
+
   it("absences-by-reason returns grouped reasons", async () => {
     const res = await request("/api/reports/absences-by-reason", { headers: authHeaders(adminToken) });
     expect(res.status).toBe(200);

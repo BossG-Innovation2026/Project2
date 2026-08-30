@@ -3,9 +3,12 @@ import { api, type ReliefRow, type Teacher } from "../api";
 import { usePolling } from "../hooks/usePolling";
 import { Card, CardHeader, Badge, Select, Spinner, EmptyState, Flash, Button } from "../components/ui";
 import { prettyDate, RELIEF_STATUS_STYLE, todayISO, addDaysISO } from "../lib/format";
+import { useAuth } from "../context/AuthContext";
 import { Download } from "lucide-react";
 
 export default function History() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [teacherFilter, setTeacherFilter] = useState<number>(0);
   const [statusFilter, setStatusFilter] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
@@ -14,13 +17,13 @@ export default function History() {
   const to = addDaysISO(todayISO(), 60);
 
   const params = new URLSearchParams({ from, to });
-  if (teacherFilter) params.set("teacher_id", String(teacherFilter));
+  if (isAdmin && teacherFilter) params.set("teacher_id", String(teacherFilter));
   if (statusFilter) params.set("status", statusFilter);
 
   const { data } = usePolling<{ history: ReliefRow[] }>(
     () => api(`/api/reports/history?${params}`),
     15000,
-    [teacherFilter, statusFilter, refreshKey]
+    [teacherFilter, statusFilter, refreshKey, isAdmin]
   );
   const { data: teachers } = usePolling<{ teachers: Teacher[] }>(() => api("/api/teachers"), 60000);
 
@@ -33,15 +36,19 @@ export default function History() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-fg">Reliever Assignment History</h1>
-          <p className="text-sm text-muted">Last 90 days · every assignment, response and override</p>
+          <p className="text-sm text-muted">
+            {isAdmin ? "Last 90 days · every assignment, response and override" : "Last 90 days · assignments related to your account"}
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={teacherFilter} onChange={(e) => setTeacherFilter(Number(e.target.value))} className="w-48">
-            <option value={0}>All relievers</option>
-            {(teachers?.teachers ?? []).map((t) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </Select>
+          {isAdmin && (
+            <Select value={teacherFilter} onChange={(e) => setTeacherFilter(Number(e.target.value))} className="w-48">
+              <option value={0}>All relievers</option>
+              {(teachers?.teachers ?? []).map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </Select>
+          )}
           <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-40">
             <option value="">All statuses</option>
             <option value="recommended">Recommended</option>
@@ -50,7 +57,7 @@ export default function History() {
             <option value="declined">Declined</option>
             <option value="overridden">Overridden</option>
           </Select>
-          <Button variant="secondary" onClick={() => window.open(`/api/reports/export.csv?from=${from}&to=${to}${teacherFilter ? `&teacher_id=${teacherFilter}` : ""}`, "_blank")}>
+          <Button variant="secondary" onClick={() => window.open(`/api/reports/export.csv?from=${from}&to=${to}${isAdmin && teacherFilter ? `&teacher_id=${teacherFilter}` : ""}`, "_blank")}>
             <Download size={14} /> CSV
           </Button>
         </div>
