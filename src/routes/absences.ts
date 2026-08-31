@@ -51,6 +51,28 @@ absencesRoutes.get("/", async (c) => {
   return c.json({ absences: results });
 });
 
+/**
+ * My leave requests with status + assigned reliever(s).
+ * Scoped to the authenticated user (teacher sees own; admin sees own too).
+ * NOTE: registered before /:id so "my-leaves" isn't treated as an id.
+ */
+absencesRoutes.get("/my-leaves", async (c) => {
+  const userId = c.get("user").id;
+  const { results } = await c.env.DB.prepare(
+    `SELECT a.id, a.date, a.period, a.reason, a.status, a.created_at,
+            (SELECT GROUP_CONCAT(u.name, ', ')
+             FROM relief_assignments r JOIN users u ON u.id = r.reliever_id
+             WHERE r.absence_id = a.id AND r.status IN ('accepted','overridden')) AS reliever_names
+     FROM absences a
+     WHERE a.teacher_id = ?
+     ORDER BY a.date DESC, a.period ASC
+     LIMIT 50`
+  )
+    .bind(userId)
+    .all<{ id: number; date: string; period: number; reason: string; status: string; created_at: string; reliever_names: string | null }>();
+  return c.json({ leaves: results });
+});
+
 absencesRoutes.get("/:id", async (c) => {
   const id = Number(c.req.param("id"));
   const row = await c.env.DB.prepare(

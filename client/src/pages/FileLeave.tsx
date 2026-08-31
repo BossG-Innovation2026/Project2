@@ -1,14 +1,30 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { usePolling } from "../hooks/usePolling";
 import { api } from "../api";
-import { Card, CardHeader, Spinner, Button, Input, Flash } from "../components/ui";
-import { todayISO } from "../lib/format";
+import { Card, CardHeader, Spinner, Button, Input, Flash, Badge, EmptyState } from "../components/ui";
+import { todayISO, prettyDate } from "../lib/format";
 import { ClipboardList } from "lucide-react";
 
 interface PeriodData {
   period_count: number;
   period_names: string[];
 }
+
+interface MyLeaveRow {
+  id: number;
+  date: string;
+  period: number;
+  reason: string;
+  status: "pending" | "approved" | "declined";
+  created_at: string;
+  reliever_names: string | null;
+}
+
+const LEAVE_STATUS_STYLE: Record<string, string> = {
+  pending: "bg-amber-100 text-amber-700",
+  approved: "bg-emerald-100 text-emerald-700",
+  declined: "bg-rose-100 text-rose-700",
+};
 
 export default function FileLeave() {
   const [fileForm, setFileForm] = useState({ date: todayISO(), reason: "" });
@@ -17,6 +33,10 @@ export default function FileLeave() {
   const [fileMsg, setFileMsg] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const { data: periodData, loading } = usePolling<PeriodData>(() => api("/api/periods"), 60000);
+  const { data: myLeaves, loading: leavesLoading } = usePolling<{ leaves: MyLeaveRow[] }>(
+    () => api("/api/absences/my-leaves"),
+    30000
+  );
 
   async function submitAbsence(e: FormEvent) {
     e.preventDefault();
@@ -125,6 +145,48 @@ export default function FileLeave() {
             <Button type="submit" disabled={fileBusy || selectedPeriods.length === 0}>{fileBusy ? "Submitting..." : `Submit${selectedPeriods.length > 1 ? ` (${selectedPeriods.length})` : ""}`}</Button>
           </div>
         </form>
+      </Card>
+
+      <Card>
+        <CardHeader
+          title="My Leave Requests"
+          subtitle="Status of your submitted leaves and assigned relievers"
+          actions={<ClipboardList className="text-dim" size={20} />}
+        />
+        <div className="overflow-x-auto">
+          {leavesLoading ? (
+            <div className="p-6 flex items-center justify-center"><Spinner /></div>
+          ) : !myLeaves || myLeaves.leaves.length === 0 ? (
+            <div className="p-3"><EmptyState message="No leave requests yet" /></div>
+          ) : (
+            <table className="w-full text-sm min-w-[640px]">
+              <thead>
+                <tr className="bg-subtle text-left text-xs font-semibold text-muted">
+                  <th className="px-4 py-2.5">Date</th>
+                  <th className="px-4 py-2.5">Period</th>
+                  <th className="px-4 py-2.5">Reason</th>
+                  <th className="px-4 py-2.5">Status</th>
+                  <th className="px-4 py-2.5">Reliever</th>
+                </tr>
+              </thead>
+              <tbody>
+                {myLeaves.leaves.map((l) => (
+                  <tr key={l.id} className="border-t border-line hover:bg-slate-50/60">
+                    <td className="px-4 py-2.5 whitespace-nowrap text-muted">{prettyDate(l.date)}</td>
+                    <td className="px-4 py-2.5 text-muted">P{l.period}</td>
+                    <td className="px-4 py-2.5 text-muted">{l.reason || "—"}</td>
+                    <td className="px-4 py-2.5">
+                      <Badge className={LEAVE_STATUS_STYLE[l.status]}>{l.status}</Badge>
+                    </td>
+                    <td className="px-4 py-2.5 text-fg font-medium">
+                      {l.status === "approved" && l.reliever_names ? l.reliever_names : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </Card>
     </div>
   );

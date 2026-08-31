@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+﻿import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { usePolling } from "../hooks/usePolling";
 import { api, type Absence, type ReliefRow } from "../api";
@@ -11,7 +11,7 @@ import NotificationsPage from "./Notifications";
 import Reports from "./Reports";
 import FileLeave from "./FileLeave";
 import { ErrorBoundary } from "../components/ErrorBoundary";
-import { ClipboardList, LifeBuoy, CheckCircle2, XCircle, LayoutDashboard, BarChart3, FileDown } from "lucide-react";
+import { ClipboardList, LifeBuoy, CheckCircle2, XCircle } from "lucide-react";
 
 interface DashboardData {
   user: { id: number; name: string; role: string };
@@ -33,12 +33,6 @@ interface DashboardData {
   };
 }
 
-const PANEL_TABS = [
-  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { key: "reports", label: "Reports", icon: BarChart3 },
-  { key: "leave", label: "File a leave", icon: FileDown },
-];
-
 export default function Dashboard() {
   const { user } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
@@ -48,20 +42,10 @@ export default function Dashboard() {
     30000,
     [refreshKey]
   );
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const rawPanel = searchParams.get("panel");
   const panel: string | null =
-    rawPanel === "reports" || rawPanel === "leave" || rawPanel === "dashboard" ? rawPanel : null;
-  const [panelTab, setPanelTab] = useState(panel ?? "dashboard");
-
-  useEffect(() => {
-    if (panel) setPanelTab(panel);
-  }, [panel]);
-
-  function switchPanelTab(tab: string) {
-    setPanelTab(tab);
-    setSearchParams({ panel: tab }, { replace: true });
-  }
+    rawPanel === "reports" || rawPanel === "leave" ? rawPanel : null;
 
   if (loading || !data) return <Spinner />;
 
@@ -106,25 +90,18 @@ export default function Dashboard() {
         <p className="text-sm text-muted">Welcome back, {data.user.name}</p>
       </div>
 
-      <div className="border-b border-line flex gap-4 mb-6">
-        {PANEL_TABS.map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => switchPanelTab(key)}
-            className={`flex items-center gap-2 pb-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              panelTab === key
-                ? "border-brand-600 text-brand-700 dark:border-brand-400 dark:text-brand-300"
-                : "border-transparent text-muted hover:text-fg"
-            }`}
-          >
-            <Icon size={15} />
-            {label}
-          </button>
-        ))}
-      </div>
+      {panel === "reports" && (
+        <ErrorBoundary label="Reports">
+          <Reports />
+        </ErrorBoundary>
+      )}
+      {panel === "leave" && (
+        <ErrorBoundary label="File a leave">
+          <FileLeave />
+        </ErrorBoundary>
+      )}
 
-      {panelTab === "dashboard" && (
+      {!panel && (
         <>
         {isAdmin ? (
           <>
@@ -263,16 +240,6 @@ export default function Dashboard() {
           </>
         )}
         </>
-      )}
-      {panelTab === "reports" && (
-        <ErrorBoundary label="Reports">
-          <Reports />
-        </ErrorBoundary>
-      )}
-      {panelTab === "leave" && (
-        <ErrorBoundary label="File a leave">
-          <FileLeave />
-        </ErrorBoundary>
       )}
     </div>
   );

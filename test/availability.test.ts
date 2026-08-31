@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { initDb, request, login, authHeaders, type SeedIds } from "./helpers";
+import { initDb, request, login, authHeaders, weekdayDate, type SeedIds } from "./helpers";
 import { addDays, todayISO, weekdayOf } from "../src/lib/dates";
 
 describe("availability", () => {
@@ -63,7 +63,7 @@ describe("availability", () => {
   });
 
   it("setting availability on a scheduled class slot is locked (409)", async () => {
-    const day = addDays(todayISO(), 5);
+    const day = weekdayDate(5);
     const wd = weekdayOf(day);
     // give teacher A a class at that slot
     await request("/api/schedules", {

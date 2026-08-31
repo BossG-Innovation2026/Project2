@@ -1,6 +1,14 @@
 import { SELF, env } from "cloudflare:test";
 import { createPasswordHash } from "../src/lib/auth";
+import { addDays, todayISO, weekdayOf } from "../src/lib/dates";
 import type { AppEnv } from "../src/types";
+
+/** Returns a weekday (Mon–Fri) date at least `days` days ahead of today. */
+export function weekdayDate(days: number): string {
+  let d = addDays(todayISO(), days);
+  while (weekdayOf(d) > 4) d = addDays(d, 1);
+  return d;
+}
 
 export const MIGRATIONS = [
   {
@@ -149,8 +157,7 @@ export async function request(
 }
 
 /** Logs in and returns a fresh session cookie value. */
-export async function login(email: string, password: string): Promise<string> {
-  const res = await SELF.fetch(
+export async function login(email: string, password: string): Promise<string> {  const res = await SELF.fetch(
     new Request("http://localhost/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

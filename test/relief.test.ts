@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { initDb, request, login, authHeaders, type SeedIds } from "./helpers";
+import { initDb, request, login, authHeaders, weekdayDate, type SeedIds } from "./helpers";
 import { addDays, todayISO, weekdayOf } from "../src/lib/dates";
 
 describe("relief", () => {
@@ -225,7 +225,7 @@ describe("relief", () => {
     // Day 12 weekday: schedule teacher A with a known subject on that weekday+period,
     // then create the absence on that exact date+period and verify the assignment
     // picks up the right subject (regression for the weekday off-by-one bug).
-    const day = addDays(todayISO(), 12);
+    const day = weekdayDate(12);
     const wd = weekdayOf(day);
     await request("/api/schedules", {
       method: "POST",
@@ -233,7 +233,13 @@ describe("relief", () => {
       body: { teacher_id: ids.teacherA, weekday: wd, period: 2, subject: "OffByOne-Math", class_name: "OB1" },
     });
 
-    const absenceId = await createApprovedAbsence(ids.teacherA, 12, 2);
+    const abs = await request("/api/absences", {
+      method: "POST",
+      headers: authHeaders(adminToken),
+      body: { teacher_id: ids.teacherA, date: day, period: 2, reason: "ob" },
+    });
+    const { ids: absIds } = await abs.json();
+    const absenceId = absIds[0];
     const assign = await request("/api/relief/assign", {
       method: "POST",
       headers: authHeaders(adminToken),
