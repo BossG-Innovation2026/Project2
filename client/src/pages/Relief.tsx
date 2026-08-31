@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { api, type Absence, type ReliefRow, type Teacher } from "../api";
 import { usePolling } from "../hooks/usePolling";
 import { Card, CardHeader, Badge, Button, Modal, Spinner, EmptyState, Flash, Select } from "../components/ui";
@@ -39,6 +39,7 @@ export default function Relief() {
   const [matches, setMatches] = useState<Record<number, Candidate[]>>({});
   const [loadedIds, setLoadedIds] = useState<Set<number>>(new Set());
   const [candErrors, setCandErrors] = useState<Record<number, string>>({});
+  const inFlight = useRef<Set<number>>(new Set());
 
   const { data } = usePolling<{ assignments: ReliefRow[] }>(
     () => api(`/api/relief${isAdmin ? "" : "?mine=1"}`),
@@ -66,12 +67,21 @@ export default function Relief() {
     return uncovered;
   }, [absences, assignments]);
 
+  // Stable signature of the uncovered-absence set so the effect only re-runs
+  // when the actual set changes (not on every poll's new array reference).
+  const uncoveredIds = useMemo(() => approvedAbsences.map((a) => a.id).sort((x, y) => x - y).join(","), [approvedAbsences]);
+
   useEffect(() => {
     if (!isAdmin || approvedAbsences.length === 0) return;
     let alive = true;
     for (const a of approvedAbsences) {
-      if (loadedIds.has(a.id) || candErrors[a.id]) continue;
-      api<{ candidates: Candidate[] }>(`/api/relief/candidates/${a.id}`)
+      if (loadedIds.has(a.id) || candErrors[a.id] || inFlight.current.has(a.id)) continue;
+      inFlight.current.add(a.id);
+      // Guard against a hung request so the card never shows "Loading…" forever.
+      const timeout = new Promise<{ candidates: Candidate[] }>((_, reject) =>
+        setTimeout(() => reject(new Error("Request timed out")), 15000)
+      );
+      Promise.race([api<{ candidates: Candidate[] }>(`/api/relief/candidates/${a.id}`), timeout])
         .then((d) => {
           if (alive) {
             setMatches((m) => ({ ...m, [a.id]: d.candidates ?? [] }));
@@ -80,10 +90,13 @@ export default function Relief() {
         })
         .catch((err) => {
           if (alive) setCandErrors((e) => ({ ...e, [a.id]: err instanceof Error ? err.message : "Failed to load" }));
+        })
+        .finally(() => {
+          inFlight.current.delete(a.id);
         });
     }
     return () => { alive = false; };
-  }, [approvedAbsences, isAdmin, refreshKey, loadedIds, candErrors]);
+  }, [approvedAbsences, uncoveredIds, isAdmin, refreshKey, loadedIds, candErrors]);
 
   async function confirmAssign(absence: Absence, candidate: Candidate) {
     setConfirm({ absence, candidate });
@@ -153,7 +166,13 @@ export default function Relief() {
 
                   <div className="px-3 py-2">
                     {candErrors[a.id] ? (
-                      <div className="text-[11px] text-rose-600">Failed to load</div>
+                      <button
+                        type="button"
+                        onClick={() => setCandErrors((e) => { delete e[a.id]; return { ...e }; })}
+                        className="text-[11px] text-rose-600 hover:underline"
+                      >
+                        Failed to load — retry
+                      </button>
                     ) : !loadedIds.has(a.id) ? (
                       <div className="text-[11px] text-dim">Loading…</div>
                     ) : cands.length === 0 ? (
