@@ -5,10 +5,12 @@ import { useAuth } from "../context/AuthContext";
 import { assetUrl, useBrand } from "../context/BrandContext";
 import { Button, Input, Flash } from "../components/ui";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
@@ -70,7 +72,23 @@ export default function Login() {
           </div>
           <div>
             <label className="block text-sm font-medium text-fg mb-1">Password</label>
-            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <div className="relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted hover:text-fg transition-colors"
+              >
+                {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+              </button>
+            </div>
           </div>
           <Button type="submit" className="w-full" disabled={busy}>
             {busy ? "Signing in..." : "Sign in"}
