@@ -20,7 +20,10 @@ absencesRoutes.get("/", async (c) => {
   const teacherId = c.req.query("teacher_id");
 
   let sql = `SELECT a.id, a.teacher_id, u.name AS teacher_name, a.date, a.period, a.reason,
-                    a.status, a.requested_by, a.reviewed_by, a.reviewed_at, a.created_at
+                     a.status, a.requested_by, a.reviewed_by, a.reviewed_at, a.created_at,
+                     (SELECT GROUP_CONCAT(r_u.name, ', ')
+                      FROM relief_assignments r JOIN users r_u ON r_u.id = r.reliever_id
+                      WHERE r.absence_id = a.id AND r.status IN ('assigned','accepted','overridden')) AS reliever_names
              FROM absences a JOIN users u ON u.id = a.teacher_id`;
   const clauses: string[] = [];
   const params: Array<string | number> = [];

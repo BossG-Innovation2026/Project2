@@ -86,6 +86,7 @@ export interface Absence {
   reviewed_by: number | null;
   reviewed_at: string | null;
   created_at: string;
+  reliever_names?: string | null;
 }
 
 export interface ReliefRow {
