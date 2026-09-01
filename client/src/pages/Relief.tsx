@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useMemo, useRef, useState } from "react";
 import { api, type Absence, type ReliefRow, type Teacher } from "../api";
 import { usePolling } from "../hooks/usePolling";
 import { Card, CardHeader, Badge, Button, Modal, Spinner, EmptyState, Flash, Select } from "../components/ui";
@@ -67,36 +67,28 @@ export default function Relief() {
     return uncovered;
   }, [absences, assignments]);
 
-  // Stable signature of the uncovered-absence set so the effect only re-runs
-  // when the actual set changes (not on every poll's new array reference).
-  const uncoveredIds = useMemo(() => approvedAbsences.map((a) => a.id).sort((x, y) => x - y).join(","), [approvedAbsences]);
-
-  useEffect(() => {
-    if (!isAdmin || approvedAbsences.length === 0) return;
-    let alive = true;
-    for (const a of approvedAbsences) {
-      if (loadedIds.has(a.id) || candErrors[a.id] || inFlight.current.has(a.id)) continue;
-      inFlight.current.add(a.id);
-      // Guard against a hung request so the card never shows "Loading…" forever.
-      const timeout = new Promise<{ candidates: Candidate[] }>((_, reject) =>
-        setTimeout(() => reject(new Error("Request timed out")), 15000)
-      );
-      Promise.race([api<{ candidates: Candidate[] }>(`/api/relief/candidates/${a.id}`), timeout])
-        .then((d) => {
-          if (alive) {
-            setMatches((m) => ({ ...m, [a.id]: d.candidates ?? [] }));
-            setLoadedIds((s) => { s.add(a.id); return new Set(s); });
-          }
-        })
-        .catch((err) => {
-          if (alive) setCandErrors((e) => ({ ...e, [a.id]: err instanceof Error ? err.message : "Failed to load" }));
-        })
-        .finally(() => {
-          inFlight.current.delete(a.id);
-        });
+  // Load candidates for ONE absence on demand (button click), not eagerly.
+  async function loadCandidates(absenceId: number) {
+    if (inFlight.current.has(absenceId)) return;
+    inFlight.current.add(absenceId);
+    setCandErrors((e) => { delete e[absenceId]; return { ...e }; });
+    // Guard against a hung request so the card never shows "Loading…" forever.
+    const timeout = new Promise<{ candidates: Candidate[] }>((_, reject) =>
+      setTimeout(() => reject(new Error("Request timed out")), 15000)
+    );
+    try {
+      const d = await Promise.race<{ candidates: Candidate[] }>([
+        api<{ candidates: Candidate[] }>(`/api/relief/candidates/${absenceId}`),
+        timeout,
+      ]);
+      setMatches((m) => ({ ...m, [absenceId]: d.candidates ?? [] }));
+      setLoadedIds((s) => { s.add(absenceId); return new Set(s); });
+    } catch (err) {
+      setCandErrors((e) => ({ ...e, [absenceId]: err instanceof Error ? err.message : "Failed to load" }));
+    } finally {
+      inFlight.current.delete(absenceId);
     }
-    return () => { alive = false; };
-  }, [approvedAbsences, uncoveredIds, isAdmin, refreshKey, loadedIds, candErrors]);
+  }
 
   async function confirmAssign(absence: Absence, candidate: Candidate) {
     setConfirm({ absence, candidate });
@@ -168,13 +160,23 @@ export default function Relief() {
                     {candErrors[a.id] ? (
                       <button
                         type="button"
-                        onClick={() => setCandErrors((e) => { delete e[a.id]; return { ...e }; })}
+                        onClick={() => void loadCandidates(a.id)}
                         className="text-[11px] text-rose-600 hover:underline"
                       >
                         Failed to load — retry
                       </button>
                     ) : !loadedIds.has(a.id) ? (
-                      <div className="text-[11px] text-dim">Loading…</div>
+                      inFlight.current.has(a.id) ? (
+                        <div className="text-[11px] text-dim">Loading…</div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => void loadCandidates(a.id)}
+                          className="w-full rounded-md border border-line-strong px-2 py-1 text-[11px] font-medium text-fg hover:border-brand-400 hover:text-brand-600 transition-colors"
+                        >
+                          Load relievers
+                        </button>
+                      )
                     ) : cands.length === 0 ? (
                       <div className="text-[11px] text-dim">No available relievers</div>
                     ) : (
