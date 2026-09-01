@@ -73,15 +73,23 @@ describe("relief", () => {
   });
 
   it("assigning to a teacher with a conflict returns 409", async () => {
-    const day = addDays(todayISO(), 4);
+    const day = weekdayDate(4);
     const wd = weekdayOf(day);
     // Teacher B has a class at this slot
-    await request("/api/schedules", {
+    const sched = await request("/api/schedules", {
       method: "POST",
       headers: authHeaders(adminToken),
       body: { teacher_id: ids.teacherB, weekday: wd, period: 1, subject: "Gen-Sci", class_name: "G9-Sci" },
     });
-    const absenceId = await createApprovedAbsence(ids.teacherA, 4, 1);
+    expect(sched.status).toBe(201);
+    const abs = await request("/api/absences", {
+      method: "POST",
+      headers: authHeaders(adminToken),
+      body: { teacher_id: ids.teacherA, date: day, period: 1, reason: "conflict test" },
+    });
+    expect(abs.status).toBe(201);
+    const { ids: absIds } = await abs.json();
+    const absenceId = absIds[0];
     const res = await request("/api/relief/assign", {
       method: "POST",
       headers: authHeaders(adminToken),
@@ -112,7 +120,7 @@ describe("relief", () => {
   });
 
   it("cannot assign a teacher on leave to their own absence", async () => {
-    const absenceId = await createApprovedAbsence(ids.teacherA, 6, 1);
+    const absenceId = await createApprovedAbsence(ids.teacherA, 6, 2);
     const res = await request("/api/relief/assign", {
       method: "POST",
       headers: authHeaders(adminToken),
@@ -199,7 +207,7 @@ describe("relief", () => {
   });
 
   it("declining the last assignment re-generates recommendations", async () => {
-    const absenceId = await createApprovedAbsence(ids.teacherC, 13, 1);
+    const absenceId = await createApprovedAbsence(ids.teacherC, 13, 2);
     const assign = await request("/api/relief/assign", {
       method: "POST",
       headers: authHeaders(adminToken),
