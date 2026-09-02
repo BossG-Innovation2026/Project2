@@ -1,13 +1,15 @@
 ﻿import { useMemo, useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { api, type Absence, type Teacher } from "../api";
 import { usePolling } from "../hooks/usePolling";
-import { Card, CardHeader, Badge, Button, Input, Select, Modal, Spinner, EmptyState, Flash } from "../components/ui";
+import { Card, Badge, Button, Input, Select, Modal, Spinner, EmptyState, Flash } from "../components/ui";
 import { prettyDate, ABSENCE_STATUS_STYLE, todayISO, addDaysISO } from "../lib/format";
 import { useAuth } from "../context/AuthContext";
-import { CheckCircle2, XCircle, Plus } from "lucide-react";
+import { CheckCircle2, XCircle, Plus, UserPlus } from "lucide-react";
 
 export default function Requests() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const isAdmin = user?.role === "admin";
   const [statusFilter, setStatusFilter] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
@@ -92,8 +94,18 @@ export default function Requests() {
                     <td className="px-4 py-2.5">
                       <Badge className={ABSENCE_STATUS_STYLE[a.status]}>{a.status}</Badge>
                     </td>
-                    <td className="px-4 py-2.5 text-fg font-medium whitespace-nowrap">
-                      {a.status === "approved" && a.reliever_names ? a.reliever_names : "—"}
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      {a.status === "approved" ? (
+                        a.reliever_names ? (
+                          <span className="text-fg font-medium">{a.reliever_names}</span>
+                        ) : (
+                          <Button variant="secondary" size="sm" onClick={() => navigate("/relief")}>
+                            <UserPlus size={14} /> Load reliever
+                          </Button>
+                        )
+                      ) : (
+                        <span className="text-dim">—</span>
+                      )}
                     </td>
                     {isAdmin && (
                       <td className="px-4 py-2.5 text-right">
