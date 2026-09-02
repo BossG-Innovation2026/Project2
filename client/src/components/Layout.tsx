@@ -35,11 +35,28 @@ export default function Layout() {
   const navigate = useNavigate();
   const { pathname, search } = useLocation();
   const [time, setTime] = useState(() => new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false }));
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     const id = setInterval(() => setTime(new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false })), 1000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (user?.role !== "admin") { setPendingCount(0); return; }
+    let alive = true;
+    async function fetchPending() {
+      try {
+        const res = await fetch("/api/absences?status=pending", { credentials: "same-origin" });
+        if (!res.ok) return;
+        const data = await res.json() as { absences: unknown[] };
+        if (alive) setPendingCount(data.absences.length);
+      } catch { /* ignore */ }
+    }
+    void fetchPending();
+    const t = setInterval(fetchPending, 15000);
+    return () => { alive = false; clearInterval(t); };
+  }, [user]);
 
   if (!user) return null;
 
@@ -76,10 +93,16 @@ export default function Layout() {
                 : to === "/"
                   ? pathname === "/" && activePanel === null
                   : pathname === to;
+              const showBadge = to === "/requests" && pendingCount > 0;
               return (
                 <Link key={to} to={to} className={navClass(active)}>
                   <Icon size={17} />
                   <span className="flex-1">{label}</span>
+                  {showBadge && (
+                    <span className="bg-rose-500 text-white text-[10px] font-bold rounded-full h-5 min-w-5 px-1.5 flex items-center justify-center">
+                      {pendingCount > 99 ? "99+" : pendingCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}
