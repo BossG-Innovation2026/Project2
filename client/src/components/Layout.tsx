@@ -3,8 +3,6 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   ClipboardList,
-  LifeBuoy,
-  Users,
   CalendarRange,
   Wand2,
   Settings,
@@ -24,7 +22,6 @@ const navItems = [
   { to: "/?panel=leave", label: "File a leave", icon: FileDown, adminOnly: false, panel: "leave" },
   { to: "/availability", label: "Availability Calendar", icon: CalendarCheck, adminOnly: false },
   { to: "/requests", label: "Leave Requests", icon: ClipboardList, adminOnly: true },
-  { to: "/relief", label: "Reliever Finder", icon: LifeBuoy, adminOnly: true },
   { to: "/schedules", label: "Class Schedules", icon: CalendarRange, adminOnly: true },
   { to: "/generator", label: "Schedule Generator", icon: Wand2, adminOnly: true },
 ];
