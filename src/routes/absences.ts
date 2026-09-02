@@ -145,27 +145,37 @@ absencesRoutes.post("/", async (c) => {
       continue;
     }
 
-    const result = await c.env.DB.prepare(
-      `INSERT INTO absences (teacher_id, date, period, reason, status, requested_by, reviewed_by, reviewed_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT (teacher_id, date, period) DO NOTHING`
-    )
-      .bind(
-        teacherId,
-        body.date,
-        period,
-        body.reason ?? "",
-        wantStatus,
-        c.get("user").id,
-        wantStatus === "approved" ? c.get("user").id : null,
-        wantStatus === "approved" ? nowISO() : null
+    let result: D1Result<unknown>;
+    try {
+      result = await c.env.DB.prepare(
+        `INSERT INTO absences (teacher_id, date, period, reason, status, requested_by, reviewed_by, reviewed_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run();
-    if (result.meta.changes === 0) {
+        .bind(
+          teacherId,
+          body.date,
+          period,
+          body.reason ?? "",
+          wantStatus,
+          c.get("user").id,
+          wantStatus === "approved" ? c.get("user").id : null,
+          wantStatus === "approved" ? nowISO() : null
+        )
+        .run();
+    } catch (e: unknown) {
+      // UNIQUE constraint violation (when migration 0007 is applied) — treat as duplicate
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes("UNIQUE") || msg.includes("constraint")) {
+        duplicates.push(period);
+        continue;
+      }
+      throw e;
+    }
+    if (result!.meta.changes === 0) {
       duplicates.push(period);
       continue;
     }
-    createdIds.push(Number(result.meta.last_row_id));
+    createdIds.push(Number(result!.meta.last_row_id));
   }
 
   if (createdIds.length === 0 && duplicates.length > 0) {
