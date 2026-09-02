@@ -815,7 +815,7 @@ export default function Settings() {
   if (!data) return <Spinner />;
 
   return (
-    <div className="space-y-4 max-w-2xl">
+    <div className="space-y-4 w-full">
       <div>
         <h1 className="text-xl font-bold text-fg">Settings</h1>
         <p className="text-sm text-muted">Manage branding, classes, teachers, school info and periods</p>
