@@ -1,11 +1,26 @@
-﻿import { useMemo, useState, type FormEvent } from "react";
+﻿import { useMemo, useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, type Absence, type Teacher } from "../api";
 import { usePolling } from "../hooks/usePolling";
 import { Card, Badge, Button, Input, Select, Modal, Spinner, EmptyState, Flash } from "../components/ui";
 import { prettyDate, ABSENCE_STATUS_STYLE, todayISO, addDaysISO } from "../lib/format";
 import { useAuth } from "../context/AuthContext";
-import { CheckCircle2, XCircle, Plus, UserPlus } from "lucide-react";
+import { CheckCircle2, XCircle, Plus, UserPlus, ShieldAlert } from "lucide-react";
+
+interface Candidate {
+  teacher_id: number;
+  name: string;
+  email: string;
+  department: string;
+  subjects: string;
+  cluster: string;
+  room: string;
+  workload_this_week: number;
+  total_relief_periods: number;
+  score: number;
+  schedule_before: { period: number; subject: string; class_name: string } | null;
+  schedule_after: { period: number; subject: string; class_name: string } | null;
+}
 
 export default function Requests() {
   const { user } = useAuth();
@@ -15,6 +30,12 @@ export default function Requests() {
   const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [matches, setMatches] = useState<Record<number, Candidate[]>>({});
+  const [loadedIds, setLoadedIds] = useState<Set<number>>(new Set());
+  const [candErrors, setCandErrors] = useState<Record<number, string>>({});
+  const inFlight = useRef<Set<number>>(new Set());
+  const [confirm, setConfirm] = useState<{ absence: Absence; candidate: Candidate } | null>(null);
+  const [assigning, setAssigning] = useState(false);
 
   const { data } = usePolling<{ absences: Absence[] }>(
     () => api(`/api/absences${statusFilter ? `?status=${statusFilter}` : ""}${isAdmin ? "" : "&mine=1"}`),
@@ -40,6 +61,44 @@ export default function Requests() {
       setRefreshKey((k) => k + 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Request failed");
+    }
+  }
+
+  async function loadCandidates(absenceId: number) {
+    if (inFlight.current.has(absenceId)) return;
+    inFlight.current.add(absenceId);
+    setCandErrors((e) => { delete e[absenceId]; return { ...e }; });
+    const timeout = new Promise<{ candidates: Candidate[] }>((_, reject) =>
+      setTimeout(() => reject(new Error("Request timed out")), 15000)
+    );
+    try {
+      const d = await Promise.race<{ candidates: Candidate[] }>([
+        api<{ candidates: Candidate[] }>(`/api/relief/candidates/${absenceId}`),
+        timeout,
+      ]);
+      setMatches((m) => ({ ...m, [absenceId]: d.candidates ?? [] }));
+      setLoadedIds((s) => { s.add(absenceId); return new Set(s); });
+    } catch (err) {
+      setCandErrors((e) => ({ ...e, [absenceId]: err instanceof Error ? err.message : "Failed to load" }));
+    } finally {
+      inFlight.current.delete(absenceId);
+    }
+  }
+
+  async function executeAssign(absenceId: number, relieverId: number) {
+    setAssigning(true);
+    setError(null);
+    try {
+      await api("/api/relief/assign", {
+        method: "POST",
+        body: JSON.stringify({ absence_id: absenceId, reliever_id: relieverId }),
+      });
+      setConfirm(null);
+      setRefreshKey((k) => k + 1);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Assignment failed");
+    } finally {
+      setAssigning(false);
     }
   }
 
@@ -94,14 +153,45 @@ export default function Requests() {
                     <td className="px-4 py-2.5">
                       <Badge className={ABSENCE_STATUS_STYLE[a.status]}>{a.status}</Badge>
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap">
+                    <td className="px-4 py-2.5 whitespace-nowrap align-top min-w-[160px]">
                       {a.status === "approved" ? (
                         a.reliever_names ? (
                           <span className="text-fg font-medium">{a.reliever_names}</span>
                         ) : (
-                          <Button variant="secondary" size="sm" onClick={() => navigate("/relief")}>
-                            <UserPlus size={14} /> Load reliever
-                          </Button>
+                          <div className="space-y-1.5">
+                            {candErrors[a.id] ? (
+                              <button
+                                type="button"
+                                onClick={() => void loadCandidates(a.id)}
+                                className="text-xs text-rose-600 hover:underline"
+                              >
+                                Failed to load — retry
+                              </button>
+                            ) : !loadedIds.has(a.id) ? (
+                              inFlight.current.has(a.id) ? (
+                                <span className="text-xs text-dim">Loading…</span>
+                              ) : (
+                                <Button variant="secondary" size="sm" onClick={() => void loadCandidates(a.id)}>
+                                  <UserPlus size={14} /> Load reliever
+                                </Button>
+                              )
+                            ) : (matches[a.id] ?? []).length === 0 ? (
+                              <span className="text-xs text-dim">No available relievers</span>
+                            ) : (
+                              <div className="space-y-1">
+                                {(matches[a.id] ?? []).map((c) => (
+                                  <button
+                                    key={c.teacher_id}
+                                    type="button"
+                                    onClick={() => setConfirm({ absence: a, candidate: c })}
+                                    className="block text-xs text-fg hover:text-brand-600 truncate text-left"
+                                  >
+                                    {c.name}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         )
                       ) : (
                         <span className="text-dim">—</span>
@@ -141,6 +231,56 @@ export default function Requests() {
         teachers={teachers?.teachers ?? []}
         isAdmin={isAdmin}
       />
+
+      {confirm && (
+        <Modal open onClose={() => setConfirm(null)} title={`Assign reliever to ${confirm.absence.teacher_name}`}>
+          <div className="space-y-4">
+            <div className="rounded-lg bg-subtle p-3 text-sm">
+              <span className="font-medium text-fg">{confirm.candidate.name}</span>
+              <span className="text-muted">
+                {" "}— {prettyDate(confirm.absence.date)}, Period {confirm.absence.period}
+                {confirm.absence.reason ? ` (${confirm.absence.reason})` : ""}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5 text-[11px]">
+              <div className="rounded border border-line bg-subtle px-2 py-1 min-w-0">
+                <div className="font-semibold uppercase tracking-wide text-dim">Before · P{confirm.absence.period - 1}</div>
+                <div className="text-muted truncate">
+                  {confirm.candidate.schedule_before
+                    ? `${confirm.candidate.schedule_before.subject || "—"}${confirm.candidate.schedule_before.class_name ? ` (${confirm.candidate.schedule_before.class_name})` : ""}`
+                    : "Free"}
+                </div>
+              </div>
+              <div className="rounded border border-brand-300 bg-brand-50 px-2 py-1 min-w-0">
+                <div className="font-semibold uppercase tracking-wide text-brand-700">Relief · P{confirm.absence.period}</div>
+                <div className="text-muted truncate">Covering {confirm.absence.teacher_name}</div>
+              </div>
+              <div className="rounded border border-line bg-subtle px-2 py-1 min-w-0">
+                <div className="font-semibold uppercase tracking-wide text-dim">After · P{confirm.absence.period + 1}</div>
+                <div className="text-muted truncate">
+                  {confirm.candidate.schedule_after
+                    ? `${confirm.candidate.schedule_after.subject || "—"}${confirm.candidate.schedule_after.class_name ? ` (${confirm.candidate.schedule_after.class_name})` : ""}`
+                    : "Free"}
+                </div>
+              </div>
+            </div>
+            <div className="rounded-lg border border-line px-4 py-3">
+              <div className="text-xs text-muted space-y-1">
+                <div>Department: <span className="text-fg">{confirm.candidate.department || "—"}</span></div>
+                <div>Subjects: <span className="text-fg">{confirm.candidate.subjects || "—"}</span></div>
+                <div>Workload this week: <span className="text-fg">{confirm.candidate.workload_this_week}</span></div>
+                <div>Total relief periods: <span className="text-fg">{confirm.candidate.total_relief_periods}</span></div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="secondary" onClick={() => setConfirm(null)}>Cancel</Button>
+              <Button disabled={assigning} onClick={() => void executeAssign(confirm.absence.id, confirm.candidate.teacher_id)}>
+                {assigning ? "Assigning..." : "Confirm assignment"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
